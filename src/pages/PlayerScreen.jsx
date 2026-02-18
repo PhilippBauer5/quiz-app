@@ -1,6 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
-import { loadRoomByCode, loadQuestions, submitAnswer } from '../lib/supabase/api';
+import { useParams, Link } from 'react-router-dom';
+import {
+  loadRoomByCode,
+  loadQuestions,
+  submitAnswer,
+  loadScores,
+} from '../lib/supabase/api';
 import { getPlayerData } from '../lib/supabase/storage';
 import { supabase } from '../lib/supabaseClient';
 
@@ -14,6 +19,7 @@ export default function PlayerScreen() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [scores, setScores] = useState([]);
 
   const playerData = getPlayerData(code);
 
@@ -76,6 +82,19 @@ export default function PlayerScreen() {
     return () => clearInterval(interval);
   }, [refreshRoom]);
 
+  // Load scores when game finishes
+  useEffect(() => {
+    if (!room || room.status !== 'finished') return;
+    (async () => {
+      try {
+        const sc = await loadScores(room.id);
+        setScores(sc);
+      } catch (err) {
+        console.error('loadScores error:', err);
+      }
+    })();
+  }, [room]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!answer.trim() || !room || !currentQuestion || !playerData) return;
@@ -95,7 +114,12 @@ export default function PlayerScreen() {
 
   if (loading) return <p className="text-gray-400">Raum wird geladen…</p>;
   if (error && !room) return <p className="text-red-400">Fehler: {error}</p>;
-  if (!playerData) return <p className="text-red-400">Keine Spielerdaten gefunden. Bitte tritt dem Raum erneut bei.</p>;
+  if (!playerData)
+    return (
+      <p className="text-red-400">
+        Keine Spielerdaten gefunden. Bitte tritt dem Raum erneut bei.
+      </p>
+    );
 
   const isWaiting = room?.status === 'waiting';
   const isFinished = room?.status === 'finished';
@@ -133,7 +157,9 @@ export default function PlayerScreen() {
         <div>
           <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 mb-4">
             <p className="text-sm text-gray-500 mb-1">Frage</p>
-            <h2 className="text-xl font-semibold">{currentQuestion.question}</h2>
+            <h2 className="text-xl font-semibold">
+              {currentQuestion.question}
+            </h2>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -168,7 +194,9 @@ export default function PlayerScreen() {
       {room?.status === 'active' && submitted && result !== null && (
         <div
           className={`rounded-xl border p-8 text-center ${
-            result ? 'border-green-700 bg-green-950/30' : 'border-red-700 bg-red-950/30'
+            result
+              ? 'border-green-700 bg-green-950/30'
+              : 'border-red-700 bg-red-950/30'
           }`}
         >
           <p className="text-4xl mb-4">{result ? '✅' : '❌'}</p>
@@ -190,8 +218,78 @@ export default function PlayerScreen() {
       {isFinished && (
         <div className="rounded-xl border border-gray-800 bg-gray-900 p-8 text-center">
           <p className="text-4xl mb-4">🏆</p>
-          <h2 className="text-xl font-semibold mb-2">Spiel beendet!</h2>
-          <p className="text-gray-400">Danke fürs Mitspielen.</p>
+          <h2 className="text-xl font-semibold mb-2">
+            {scores.length > 0
+              ? `${scores[0].room_players?.nickname || 'Spieler'} hat gewonnen!`
+              : 'Spiel beendet!'}
+          </h2>
+
+          {/* Player placement */}
+          {scores.length > 0 &&
+            playerData &&
+            (() => {
+              const myIdx = scores.findIndex(
+                (s) => s.player_id === playerData.playerId
+              );
+              if (myIdx === -1)
+                return (
+                  <p className="text-gray-400 mb-4">Kein Score vorhanden.</p>
+                );
+              const place = myIdx + 1;
+              const medal =
+                place === 1
+                  ? '🥇'
+                  : place === 2
+                    ? '🥈'
+                    : place === 3
+                      ? '🥉'
+                      : `${place}.`;
+              return (
+                <p className="text-lg text-gray-300 mb-4">
+                  {medal} Du bist{' '}
+                  <span className="font-bold text-white">Platz {place}</span>{' '}
+                  mit{' '}
+                  <span className="font-bold text-white">
+                    {scores[myIdx].score} Pkt.
+                  </span>
+                </p>
+              );
+            })()}
+
+          {/* Scoreboard */}
+          {scores.length > 0 && (
+            <div className="max-w-sm mx-auto mb-6">
+              {scores.map((s, idx) => (
+                <div
+                  key={s.id}
+                  className={`flex items-center justify-between py-2 border-b border-gray-800 last:border-0 ${
+                    s.player_id === playerData?.playerId
+                      ? 'text-white font-bold'
+                      : 'text-gray-400'
+                  }`}
+                >
+                  <span>
+                    {idx === 0
+                      ? '🥇'
+                      : idx === 1
+                        ? '🥈'
+                        : idx === 2
+                          ? '🥉'
+                          : `${idx + 1}.`}{' '}
+                    {s.room_players?.nickname || 'Spieler'}
+                  </span>
+                  <span className="font-bold">{s.score} Pkt.</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <Link
+            to="/"
+            className="inline-block rounded-lg bg-blue-600 px-6 py-3 font-medium hover:bg-blue-500 transition-colors"
+          >
+            Zurück zur Startseite
+          </Link>
         </div>
       )}
     </div>
