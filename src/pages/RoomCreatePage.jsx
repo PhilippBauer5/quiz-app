@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { loadQuizzes, createRoom } from '../lib/supabase/api';
 import { saveHostToken } from '../lib/supabase/storage';
+import { ArrowLeft, Plus, FileText, Play } from 'lucide-react';
+import { Card, CardContent } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Skeleton } from '../components/ui/Skeleton';
+import { EmptyState, ErrorState } from '../components/ui/States';
+import { PageTransition, FadeIn } from '../components/ui/Animations';
+import { toast } from 'sonner';
 
 export default function RoomCreatePage() {
   const navigate = useNavigate();
@@ -30,88 +38,111 @@ export default function RoomCreatePage() {
     try {
       const room = await createRoom(selectedQuiz);
       saveHostToken(room.room_code, room.host_token);
+      toast.success('Raum erstellt!');
       navigate(`/room/${room.room_code}/host`);
     } catch (err) {
       setError(err.message);
+      toast.error('Fehler beim Erstellen.');
     } finally {
       setCreating(false);
     }
   }
 
   if (loading) {
-    return <p className="text-gray-400">Quizzes werden geladen…</p>;
+    return (
+      <PageTransition>
+        <div className="flex items-center gap-3 mb-6">
+          <Skeleton className="h-8 w-8" />
+          <Skeleton className="h-7 w-40" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+      </PageTransition>
+    );
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Raum erstellen</h1>
-        <Link
-          to="/"
-          className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
-        >
-          ← Zurück
+    <PageTransition>
+      <div className="flex items-center gap-3 mb-6">
+        <Link to="/">
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
         </Link>
+        <h1 className="text-2xl font-bold tracking-tight">Raum erstellen</h1>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-900/50 border border-red-700 px-4 py-3 text-sm text-red-300">
-          {error}
+        <div className="mb-4">
+          <ErrorState message={error} />
         </div>
       )}
 
       {quizzes.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-gray-700 p-12 text-center">
-          <p className="text-4xl mb-4">📝</p>
-          <p className="text-gray-400 mb-4">Du hast noch kein Quiz erstellt.</p>
-          <Link
-            to="/quiz/create"
-            className="inline-block rounded-lg bg-blue-600 px-6 py-3 font-medium hover:bg-blue-500 transition-colors"
+        <FadeIn>
+          <EmptyState
+            icon={FileText}
+            title="Keine Quizzes vorhanden"
+            description="Erstelle zuerst ein Quiz, bevor du einen Raum starten kannst."
           >
-            Quiz erstellen
-          </Link>
-        </div>
+            <Link to="/quiz/create">
+              <Button>
+                <Plus className="h-4 w-4" />
+                Quiz erstellen
+              </Button>
+            </Link>
+          </EmptyState>
+        </FadeIn>
       ) : (
         <>
-          <p className="text-gray-400 mb-4">Wähle ein Quiz für den Raum:</p>
+          <p className="text-gray-400 mb-4 text-sm">
+            Wähle ein Quiz für den Raum:
+          </p>
 
           <div className="grid gap-3 sm:grid-cols-2 mb-6">
-            {quizzes.map((quiz) => (
-              <button
-                key={quiz.id}
-                onClick={() => setSelectedQuiz(quiz.id)}
-                className={`rounded-xl border p-4 text-left transition-all ${
-                  selectedQuiz === quiz.id
-                    ? 'border-blue-500 bg-blue-950/50'
-                    : 'border-gray-800 bg-gray-900 hover:border-gray-600'
-                }`}
-              >
-                <h3 className="font-semibold">{quiz.title}</h3>
-                <p className="text-sm text-gray-500">
-                  {quiz.questionCount} Frage
-                  {quiz.questionCount !== 1 ? 'n' : ''}
-                </p>
-              </button>
+            {quizzes.map((quiz, i) => (
+              <FadeIn key={quiz.id} delay={i * 0.05}>
+                <button
+                  onClick={() => setSelectedQuiz(quiz.id)}
+                  className={`w-full rounded-xl border p-4 text-left transition-all ${
+                    selectedQuiz === quiz.id
+                      ? 'border-blue-500 bg-blue-950/40 ring-1 ring-blue-500/30'
+                      : 'border-gray-800 bg-gray-900/80 hover:border-gray-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-sm">{quiz.title}</h3>
+                    <Badge variant="secondary">
+                      {quiz.questionCount}{' '}
+                      {quiz.questionCount === 1 ? 'Frage' : 'Fragen'}
+                    </Badge>
+                  </div>
+                </button>
+              </FadeIn>
             ))}
           </div>
 
           <div className="flex gap-3">
-            <button
+            <Button
               onClick={handleCreate}
-              disabled={creating || !selectedQuiz}
-              className="rounded-lg bg-blue-600 px-6 py-3 text-lg font-medium hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              loading={creating}
+              disabled={!selectedQuiz}
+              size="lg"
             >
+              <Play className="h-4 w-4" />
               {creating ? 'Wird erstellt…' : 'Raum erstellen'}
-            </button>
-            <Link
-              to="/"
-              className="rounded-lg border border-gray-700 px-6 py-3 font-medium text-gray-300 hover:border-gray-500 transition-colors"
-            >
-              Abbrechen
+            </Button>
+            <Link to="/">
+              <Button variant="outline" size="lg">
+                Abbrechen
+              </Button>
             </Link>
           </div>
         </>
       )}
-    </div>
+    </PageTransition>
   );
 }

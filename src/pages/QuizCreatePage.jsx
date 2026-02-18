@@ -2,6 +2,15 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createQuiz, saveQuestions } from '../lib/supabase/api';
 import { GAME_MODES } from '../gameModes';
+import { ArrowLeft, Plus, Trash2, Save, Check, X } from 'lucide-react';
+import { Card, CardContent } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Label } from '../components/ui/Label';
+import { Badge } from '../components/ui/Badge';
+import { ErrorState } from '../components/ui/States';
+import { PageTransition, FadeIn } from '../components/ui/Animations';
+import { toast } from 'sonner';
 
 function emptyQuestion() {
   return { question: '', answer: '', key: crypto.randomUUID() };
@@ -31,12 +40,12 @@ export default function QuizCreatePage() {
 
   async function handleSave() {
     if (!title.trim()) {
-      setError('Titel ist erforderlich.');
+      toast.error('Titel ist erforderlich.');
       return;
     }
     const validQuestions = questions.filter((q) => q.question.trim());
     if (validQuestions.length === 0) {
-      setError('Mindestens eine Frage ist erforderlich.');
+      toast.error('Mindestens eine Frage ist erforderlich.');
       return;
     }
 
@@ -46,163 +55,172 @@ export default function QuizCreatePage() {
     try {
       const quiz = await createQuiz(title.trim(), quizType);
       await saveQuestions(quiz.id, validQuestions);
+      toast.success('Quiz erstellt!');
       navigate(`/quiz/${quiz.id}/edit`);
     } catch (err) {
       setError(err.message);
+      toast.error('Fehler beim Erstellen.');
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div>
+    <PageTransition>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Neues Quiz erstellen</h1>
-        <Link
-          to="/"
-          className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
-        >
-          ← Zurück
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Neues Quiz erstellen
+          </h1>
+        </div>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-900/50 border border-red-700 px-4 py-3 text-sm text-red-300">
-          {error}
+        <div className="mb-4">
+          <ErrorState message={error} />
         </div>
       )}
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-400 mb-1">
-          Titel
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="z. B. Allgemeinwissen"
-          className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2.5 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-        />
-      </div>
+      <Card className="mb-6">
+        <CardContent className="p-6 space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="title">Titel</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="z. B. Allgemeinwissen"
+              className="h-11"
+            />
+          </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-400 mb-2">
-          Spielmodus
-        </label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {Object.entries(GAME_MODES).map(([key, mode]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setQuizType(key)}
-              className={`rounded-xl border p-4 text-left transition-all ${
-                quizType === key
-                  ? 'border-blue-500 bg-blue-950/50'
-                  : 'border-gray-800 bg-gray-900 hover:border-gray-600'
-              }`}
-            >
-              <span className="font-semibold">{mode.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">Fragen</h2>
-
-        <div className="space-y-4">
-          {questions.map((q, idx) => (
-            <div
-              key={q.key}
-              className="rounded-xl border border-gray-800 bg-gray-900 p-4"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-500">
-                  Frage {idx + 1}
-                </span>
-                {questions.length > 1 && (
-                  <button
-                    onClick={() => removeQuestion(q.key)}
-                    className="text-sm text-red-400 hover:text-red-300"
-                  >
-                    Entfernen
-                  </button>
-                )}
-              </div>
-
-              <input
-                type="text"
-                value={q.question}
-                onChange={(e) =>
-                  updateQuestion(q.key, 'question', e.target.value)
-                }
-                placeholder="Frage eingeben…"
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none mb-2"
-              />
-
-              {quizType === 'true_false' ? (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => updateQuestion(q.key, 'answer', 'Wahr')}
-                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      q.answer === 'Wahr'
-                        ? 'bg-green-600 text-white'
-                        : 'border border-gray-700 bg-gray-800 text-gray-400 hover:border-green-500'
-                    }`}
-                  >
-                    ✓ Wahr
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateQuestion(q.key, 'answer', 'Falsch')}
-                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      q.answer === 'Falsch'
-                        ? 'bg-red-600 text-white'
-                        : 'border border-gray-700 bg-gray-800 text-gray-400 hover:border-red-500'
-                    }`}
-                  >
-                    ✗ Falsch
-                  </button>
-                </div>
-              ) : (
-                <input
-                  type="text"
-                  value={q.answer}
-                  onChange={(e) =>
-                    updateQuestion(q.key, 'answer', e.target.value)
-                  }
-                  placeholder="Musterantwort (optional)"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-                />
-              )}
+          <div className="space-y-2">
+            <Label>Spielmodus</Label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {Object.entries(GAME_MODES).map(([key, mode]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setQuizType(key)}
+                  className={`rounded-lg border p-4 text-left transition-all ${
+                    quizType === key
+                      ? 'border-blue-500 bg-blue-950/40 ring-1 ring-blue-500/30'
+                      : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                  }`}
+                >
+                  <span className="font-medium text-sm">{mode.label}</span>
+                </button>
+              ))}
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Fragen</h2>
+          <Badge variant="secondary">{questions.length}</Badge>
+        </div>
+
+        <div className="space-y-3">
+          {questions.map((q, idx) => (
+            <FadeIn key={q.key}>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-500">
+                      Frage {idx + 1}
+                    </span>
+                    {questions.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeQuestion(q.key)}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Entfernen
+                      </Button>
+                    )}
+                  </div>
+
+                  <Input
+                    value={q.question}
+                    onChange={(e) =>
+                      updateQuestion(q.key, 'question', e.target.value)
+                    }
+                    placeholder="Frage eingeben…"
+                    className="mb-2"
+                  />
+
+                  {quizType === 'true_false' ? (
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={q.answer === 'Wahr' ? 'success' : 'outline'}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => updateQuestion(q.key, 'answer', 'Wahr')}
+                      >
+                        <Check className="h-4 w-4" />
+                        Wahr
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={
+                          q.answer === 'Falsch' ? 'destructive' : 'outline'
+                        }
+                        size="sm"
+                        className="flex-1"
+                        onClick={() =>
+                          updateQuestion(q.key, 'answer', 'Falsch')
+                        }
+                      >
+                        <X className="h-4 w-4" />
+                        Falsch
+                      </Button>
+                    </div>
+                  ) : (
+                    <Input
+                      value={q.answer}
+                      onChange={(e) =>
+                        updateQuestion(q.key, 'answer', e.target.value)
+                      }
+                      placeholder="Musterantwort (optional)"
+                      className="text-sm"
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            </FadeIn>
           ))}
         </div>
 
         <button
           onClick={addQuestion}
-          className="mt-3 rounded-lg border border-dashed border-gray-700 px-4 py-2 text-sm text-gray-400 hover:border-blue-500 hover:text-blue-400 transition-all w-full"
+          className="mt-3 w-full rounded-lg border-2 border-dashed border-gray-700 px-4 py-3 text-sm text-gray-500 hover:border-blue-500 hover:text-blue-400 transition-all flex items-center justify-center gap-2"
         >
-          + Frage hinzufügen
+          <Plus className="h-4 w-4" />
+          Frage hinzufügen
         </button>
       </div>
 
       <div className="flex gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
+        <Button onClick={handleSave} loading={saving} size="lg">
+          <Save className="h-4 w-4" />
           {saving ? 'Wird gespeichert…' : 'Quiz speichern'}
-        </button>
-        <Link
-          to="/"
-          className="rounded-lg border border-gray-700 px-6 py-2.5 font-medium text-gray-300 hover:border-gray-500 transition-colors"
-        >
-          Abbrechen
+        </Button>
+        <Link to="/">
+          <Button variant="outline" size="lg">
+            Abbrechen
+          </Button>
         </Link>
       </div>
-    </div>
+    </PageTransition>
   );
 }

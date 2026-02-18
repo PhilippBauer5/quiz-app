@@ -2,6 +2,20 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { savePlayerData } from '../lib/supabase/storage';
 import { joinRoom } from '../lib/supabase/api';
+import { ArrowLeft, LogIn } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Label } from '../components/ui/Label';
+import { ErrorState } from '../components/ui/States';
+import { PageTransition } from '../components/ui/Animations';
+import { toast } from 'sonner';
 
 export default function RoomJoinPage() {
   const navigate = useNavigate();
@@ -13,7 +27,7 @@ export default function RoomJoinPage() {
   async function handleJoin(e) {
     e.preventDefault();
     if (!roomCode.trim() || !nickname.trim()) {
-      setError('Raumcode und Nickname sind erforderlich.');
+      toast.error('Raumcode und Nickname sind erforderlich.');
       return;
     }
 
@@ -30,73 +44,81 @@ export default function RoomJoinPage() {
       navigate(`/room/${room.room_code}/play`);
     } catch (err) {
       setError(err.message);
+      toast.error('Beitritt fehlgeschlagen.');
     } finally {
       setJoining(false);
     }
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Raum beitreten</h1>
-        <Link
-          to="/"
-          className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
-        >
-          ← Zurück
+    <PageTransition>
+      <div className="flex items-center gap-3 mb-6">
+        <Link to="/">
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
         </Link>
+        <h1 className="text-2xl font-bold tracking-tight">Raum beitreten</h1>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-900/50 border border-red-700 px-4 py-3 text-sm text-red-300">
-          {error}
-        </div>
-      )}
+      <Card className="max-w-md">
+        <CardHeader>
+          <CardTitle>Spiel beitreten</CardTitle>
+          <CardDescription>
+            Gib den Raumcode und deinen Namen ein.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <div className="mb-4">
+              <ErrorState message={error} />
+            </div>
+          )}
 
-      <form onSubmit={handleJoin} className="space-y-4 max-w-md">
-        <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">
-            Raumcode
-          </label>
-          <input
-            type="text"
-            value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-            placeholder="z. B. ABC123"
-            maxLength={6}
-            className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-2xl text-center font-mono tracking-widest text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none uppercase"
-          />
-        </div>
+          <form onSubmit={handleJoin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="code">Raumcode</Label>
+              <Input
+                id="code"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                placeholder="z. B. ABC123"
+                maxLength={6}
+                className="h-14 text-2xl text-center font-mono tracking-widest uppercase"
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">
-            Dein Nickname
-          </label>
-          <input
-            type="text"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            placeholder="z. B. MaxPower"
-            maxLength={20}
-            className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2.5 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="nick">Dein Nickname</Label>
+              <Input
+                id="nick"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="z. B. MaxPower"
+                maxLength={20}
+                className="h-11"
+              />
+            </div>
 
-        <button
-          type="submit"
-          disabled={joining}
-          className="w-full rounded-lg bg-blue-600 px-6 py-3 text-lg font-medium hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {joining ? 'Beitritt läuft…' : 'Beitreten'}
-        </button>
-
-        <Link
-          to="/"
-          className="block w-full text-center rounded-lg border border-gray-700 px-6 py-3 font-medium text-gray-300 hover:border-gray-500 transition-colors"
-        >
-          Abbrechen
-        </Link>
-      </form>
-    </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                type="submit"
+                loading={joining}
+                size="lg"
+                className="w-full"
+              >
+                <LogIn className="h-4 w-4" />
+                {joining ? 'Beitritt läuft…' : 'Beitreten'}
+              </Button>
+              <Link to="/">
+                <Button variant="outline" size="lg" className="w-full">
+                  Abbrechen
+                </Button>
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </PageTransition>
   );
 }

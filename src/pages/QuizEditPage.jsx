@@ -6,6 +6,24 @@ import {
   saveQuestions,
   updateQuiz,
 } from '../lib/supabase/api';
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Save,
+  Check,
+  X,
+  ArrowRight,
+} from 'lucide-react';
+import { Card, CardContent } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Label } from '../components/ui/Label';
+import { Badge } from '../components/ui/Badge';
+import { Skeleton } from '../components/ui/Skeleton';
+import { ErrorState, LoadingState } from '../components/ui/States';
+import { PageTransition, FadeIn } from '../components/ui/Animations';
+import { toast } from 'sonner';
 
 function questionWithKey(q) {
   return { ...q, key: q.id || crypto.randomUUID() };
@@ -23,7 +41,6 @@ export default function QuizEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     Promise.all([loadQuiz(id), loadQuestions(id)])
@@ -56,173 +73,185 @@ export default function QuizEditPage() {
 
   async function handleSave() {
     if (!title.trim()) {
-      setError('Titel ist erforderlich.');
+      toast.error('Titel ist erforderlich.');
       return;
     }
 
     setSaving(true);
     setError(null);
-    setSaved(false);
 
     try {
       await updateQuiz(id, { title: title.trim() });
       const validQuestions = questions.filter((q) => q.question.trim());
       const savedQuestions = await saveQuestions(id, validQuestions);
       setQuestions(savedQuestions.map(questionWithKey));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      toast.success('Gespeichert!');
     } catch (err) {
       setError(err.message);
+      toast.error('Fehler beim Speichern.');
     } finally {
       setSaving(false);
     }
   }
 
   if (loading) {
-    return <p className="text-gray-400">Quiz wird geladen…</p>;
+    return (
+      <PageTransition>
+        <div className="flex items-center gap-3 mb-6">
+          <Skeleton className="h-8 w-8" />
+          <Skeleton className="h-7 w-48" />
+        </div>
+        <Skeleton className="h-20 rounded-xl mb-6" />
+        <Skeleton className="h-32 rounded-xl mb-3" />
+        <Skeleton className="h-32 rounded-xl" />
+      </PageTransition>
+    );
   }
 
   if (error && !quiz) {
-    return <p className="text-red-400">Fehler: {error}</p>;
+    return (
+      <PageTransition>
+        <ErrorState message={error} />
+      </PageTransition>
+    );
   }
 
   return (
-    <div>
+    <PageTransition>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Quiz bearbeiten</h1>
-        <Link
-          to="/quizzes"
-          className="text-sm text-gray-500 hover:text-gray-300"
-        >
-          ← Zurück
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/quizzes">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-bold tracking-tight">Quiz bearbeiten</h1>
+        </div>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-900/50 border border-red-700 px-4 py-3 text-sm text-red-300">
-          {error}
+        <div className="mb-4">
+          <ErrorState message={error} />
         </div>
       )}
 
-      {saved && (
-        <div className="mb-4 rounded-lg bg-green-900/50 border border-green-700 px-4 py-3 text-sm text-green-300">
-          Gespeichert!
+      <Card className="mb-6">
+        <CardContent className="p-6">
+          <div className="space-y-2">
+            <Label htmlFor="title">Titel</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="h-11"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Fragen</h2>
+          <Badge variant="secondary">{questions.length}</Badge>
         </div>
-      )}
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-400 mb-1">
-          Titel
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2.5 text-white focus:border-blue-500 focus:outline-none"
-        />
-      </div>
-
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">
-          Fragen ({questions.length})
-        </h2>
-
-        <div className="space-y-4">
+        <div className="space-y-3">
           {questions.map((q, idx) => (
-            <div
-              key={q.key}
-              className="rounded-xl border border-gray-800 bg-gray-900 p-4"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-500">
-                  Frage {idx + 1}
-                </span>
-                {questions.length > 1 && (
-                  <button
-                    onClick={() => removeQuestion(q.key)}
-                    className="text-sm text-red-400 hover:text-red-300"
-                  >
-                    Entfernen
-                  </button>
-                )}
-              </div>
+            <FadeIn key={q.key}>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-500">
+                      Frage {idx + 1}
+                    </span>
+                    {questions.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeQuestion(q.key)}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Entfernen
+                      </Button>
+                    )}
+                  </div>
 
-              <input
-                type="text"
-                value={q.question}
-                onChange={(e) =>
-                  updateQuestion(q.key, 'question', e.target.value)
-                }
-                placeholder="Frage eingeben…"
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none mb-2"
-              />
+                  <Input
+                    value={q.question}
+                    onChange={(e) =>
+                      updateQuestion(q.key, 'question', e.target.value)
+                    }
+                    placeholder="Frage eingeben…"
+                    className="mb-2"
+                  />
 
-              {quiz?.quiz_type === 'true_false' ? (
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => updateQuestion(q.key, 'answer', 'Wahr')}
-                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      q.answer === 'Wahr'
-                        ? 'bg-green-600 text-white'
-                        : 'border border-gray-700 bg-gray-800 text-gray-400 hover:border-green-500'
-                    }`}
-                  >
-                    ✓ Wahr
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateQuestion(q.key, 'answer', 'Falsch')}
-                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      q.answer === 'Falsch'
-                        ? 'bg-red-600 text-white'
-                        : 'border border-gray-700 bg-gray-800 text-gray-400 hover:border-red-500'
-                    }`}
-                  >
-                    ✗ Falsch
-                  </button>
-                </div>
-              ) : (
-                <input
-                  type="text"
-                  value={q.answer || ''}
-                  onChange={(e) =>
-                    updateQuestion(q.key, 'answer', e.target.value)
-                  }
-                  placeholder="Musterantwort (optional)"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-                />
-              )}
-            </div>
+                  {quiz?.quiz_type === 'true_false' ? (
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={q.answer === 'Wahr' ? 'success' : 'outline'}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => updateQuestion(q.key, 'answer', 'Wahr')}
+                      >
+                        <Check className="h-4 w-4" />
+                        Wahr
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={
+                          q.answer === 'Falsch' ? 'destructive' : 'outline'
+                        }
+                        size="sm"
+                        className="flex-1"
+                        onClick={() =>
+                          updateQuestion(q.key, 'answer', 'Falsch')
+                        }
+                      >
+                        <X className="h-4 w-4" />
+                        Falsch
+                      </Button>
+                    </div>
+                  ) : (
+                    <Input
+                      value={q.answer || ''}
+                      onChange={(e) =>
+                        updateQuestion(q.key, 'answer', e.target.value)
+                      }
+                      placeholder="Musterantwort (optional)"
+                      className="text-sm"
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            </FadeIn>
           ))}
         </div>
 
         <button
           onClick={addQuestion}
-          className="mt-3 rounded-lg border border-dashed border-gray-700 px-4 py-2 text-sm text-gray-400 hover:border-blue-500 hover:text-blue-400 transition-all w-full"
+          className="mt-3 w-full rounded-lg border-2 border-dashed border-gray-700 px-4 py-3 text-sm text-gray-500 hover:border-blue-500 hover:text-blue-400 transition-all flex items-center justify-center gap-2"
         >
-          + Frage hinzufügen
+          <Plus className="h-4 w-4" />
+          Frage hinzufügen
         </button>
       </div>
 
       <div className="flex gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
+        <Button onClick={handleSave} loading={saving} size="lg">
+          <Save className="h-4 w-4" />
           {saving ? 'Wird gespeichert…' : 'Speichern'}
-        </button>
-
-        <Link
-          to="/room/create"
-          className="rounded-lg border border-gray-700 px-6 py-2.5 font-medium text-gray-300 hover:border-gray-500 transition-colors"
-        >
-          Raum erstellen →
+        </Button>
+        <Link to="/room/create">
+          <Button variant="outline" size="lg">
+            Raum erstellen
+            <ArrowRight className="h-4 w-4" />
+          </Button>
         </Link>
       </div>
 
       <p className="mt-4 text-xs text-gray-600">Quiz-ID: {id}</p>
-    </div>
+    </PageTransition>
   );
 }

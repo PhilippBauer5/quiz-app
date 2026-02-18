@@ -12,6 +12,32 @@ import {
 } from '../lib/supabase/api';
 import { getHostToken } from '../lib/supabase/storage';
 import { GAME_MODES } from '../gameModes';
+import {
+  Copy,
+  Users,
+  Play,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  X,
+  Trophy,
+  Award,
+  AlertTriangle,
+  Home,
+  Square,
+  Clock,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { PageTransition, FadeIn } from '../components/ui/Animations';
+import { LoadingState, ErrorState } from '../components/ui/States';
 
 export default function HostScreen() {
   const { code } = useParams();
@@ -206,17 +232,26 @@ export default function HostScreen() {
     }
   }
 
-  if (loading) return <p className="text-gray-400">Raum wird geladen…</p>;
-  if (error && !room) return <p className="text-red-400">Fehler: {error}</p>;
+  if (loading) return <LoadingState text="Raum wird geladen…" />;
+  if (error && !room) return <ErrorState title="Fehler" description={error} />;
   if (!hostToken)
     return (
-      <p className="text-red-400">
-        Kein Host-Token gefunden. Bist du der Host?
-      </p>
+      <ErrorState
+        title="Kein Zugriff"
+        description="Kein Host-Token gefunden. Bist du der Host?"
+      />
     );
 
+  const placeIcon = (idx) => {
+    const colors = ['text-yellow-400', 'text-gray-400', 'text-amber-600'];
+    if (idx < 3) return <Award className={`h-5 w-5 ${colors[idx]}`} />;
+    return (
+      <span className="text-sm text-gray-500 w-5 text-center">{idx + 1}.</span>
+    );
+  };
+
   return (
-    <div>
+    <PageTransition>
       {error && (
         <div className="mb-4 rounded-lg bg-red-900/50 border border-red-700 px-4 py-3 text-sm text-red-300">
           {error}
@@ -231,57 +266,73 @@ export default function HostScreen() {
             <span className="text-4xl font-mono font-bold tracking-widest">
               {code}
             </span>
-            <button
-              onClick={() => navigator.clipboard.writeText(code)}
-              className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(code);
+                toast('Code kopiert');
+              }}
             >
-              Kopieren
-            </button>
+              <Copy className="h-4 w-4 mr-1.5" /> Kopieren
+            </Button>
           </div>
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-500">Spieler</p>
-          <p className="text-2xl font-bold">{players.length}</p>
+          <div className="flex items-center justify-end gap-2">
+            <Users className="h-5 w-5 text-gray-400" />
+            <span className="text-2xl font-bold">{players.length}</span>
+          </div>
         </div>
       </div>
 
       {/* Waiting State */}
       {isWaiting && (
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 text-center">
-          <p className="text-lg mb-2">Warte auf Spieler…</p>
-          <div className="mb-4">
-            {players.length === 0 ? (
-              <p className="text-gray-500">Noch keine Spieler beigetreten.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2 justify-center">
-                {players.map((p) => (
-                  <span
-                    key={p.id}
-                    className="rounded-full bg-gray-800 px-3 py-1 text-sm"
-                  >
-                    {p.nickname}
-                  </span>
-                ))}
+        <FadeIn>
+          <Card className="text-center">
+            <CardContent className="pt-6">
+              <Clock className="h-10 w-10 text-blue-400 mx-auto mb-3" />
+              <p className="text-lg mb-4">Warte auf Spieler…</p>
+              <div className="mb-6">
+                {players.length === 0 ? (
+                  <p className="text-gray-500">
+                    Noch keine Spieler beigetreten.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {players.map((p) => (
+                      <Badge key={p.id} variant="secondary">
+                        {p.nickname}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <button
-            onClick={startGame}
-            disabled={players.length === 0 || questions.length === 0}
-            className="rounded-lg bg-green-600 px-8 py-3 text-lg font-medium hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Spiel starten
-          </button>
-          <Link
-            to="/"
-            className="ml-3 rounded-lg border border-gray-700 px-8 py-3 text-lg font-medium text-gray-300 hover:border-gray-500 transition-colors"
-          >
-            Abbrechen
-          </Link>
-          {questions.length === 0 && (
-            <p className="mt-2 text-sm text-red-400">Keine Fragen im Quiz!</p>
-          )}
-        </div>
+              <div className="flex gap-3 justify-center">
+                <Button
+                  variant="success"
+                  size="lg"
+                  onClick={startGame}
+                  disabled={players.length === 0 || questions.length === 0}
+                >
+                  <Play className="h-5 w-5 mr-2" /> Spiel starten
+                </Button>
+                <Link
+                  to="/"
+                  className={buttonVariants({ variant: 'outline', size: 'lg' })}
+                >
+                  Abbrechen
+                </Link>
+              </div>
+              {questions.length === 0 && (
+                <p className="mt-3 text-sm text-red-400 flex items-center justify-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4" /> Keine Fragen im Quiz!
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </FadeIn>
       )}
 
       {/* Active Game */}
@@ -290,28 +341,35 @@ export default function HostScreen() {
       ) : (
         room?.status === 'active' &&
         currentQuestion && (
-          <div>
-            <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 mb-4">
-              <p className="text-sm text-gray-500 mb-1">
-                Frage {currentIdx + 1} / {questions.length}
-              </p>
-              <h2 className="text-xl font-semibold mb-2">
-                {currentQuestion.question}
-              </h2>
-              {currentQuestion.answer && (
-                <p className="text-sm text-gray-500">
-                  Musterantwort:{' '}
-                  <span className="text-gray-300">
-                    {currentQuestion.answer}
-                  </span>
-                </p>
-              )}
-            </div>
+          <FadeIn>
+            <Card className="mb-4">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-1">
+                  <Badge variant="secondary">
+                    Frage {currentIdx + 1} / {questions.length}
+                  </Badge>
+                </div>
+                <h2 className="text-xl font-semibold mt-2 mb-2">
+                  {currentQuestion.question}
+                </h2>
+                {currentQuestion.answer && (
+                  <p className="text-sm text-gray-500">
+                    Musterantwort:{' '}
+                    <span className="text-gray-300">
+                      {currentQuestion.answer}
+                    </span>
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Submissions */}
             <div className="mb-4">
-              <h3 className="text-lg font-semibold mb-3">
-                Antworten ({submissions.length} / {players.length})
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                Antworten
+                <Badge>
+                  {submissions.length} / {players.length}
+                </Badge>
               </h3>
 
               {submissions.length === 0 ? (
@@ -319,54 +377,65 @@ export default function HostScreen() {
               ) : (
                 <div className="space-y-3">
                   {submissions.map((sub) => (
-                    <div
+                    <Card
                       key={sub.id}
-                      className={`rounded-xl border p-4 ${
+                      className={
                         sub.is_correct === true
                           ? 'border-green-700 bg-green-950/30'
                           : sub.is_correct === false
                             ? 'border-red-700 bg-red-950/30'
-                            : 'border-gray-800 bg-gray-900'
-                      }`}
+                            : ''
+                      }
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">
-                            {sub.room_players?.nickname || 'Spieler'}
-                          </p>
-                          <p className="text-gray-300">„{sub.answer_text}"</p>
-                        </div>
-
-                        {sub.is_correct === null ? (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() =>
-                                handleEvaluate(sub.id, sub.player_id, true)
-                              }
-                              className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium hover:bg-green-500"
-                            >
-                              ✓ Richtig
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleEvaluate(sub.id, sub.player_id, false)
-                              }
-                              className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium hover:bg-red-500"
-                            >
-                              ✗ Falsch
-                            </button>
+                      <CardContent className="py-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">
+                              {sub.room_players?.nickname || 'Spieler'}
+                            </p>
+                            <p className="text-gray-300">„{sub.answer_text}"</p>
                           </div>
-                        ) : (
-                          <span
-                            className={`text-sm font-medium ${
-                              sub.is_correct ? 'text-green-400' : 'text-red-400'
-                            }`}
-                          >
-                            {sub.is_correct ? '✓ Richtig' : '✗ Falsch'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+
+                          {sub.is_correct === null ? (
+                            <div className="flex gap-2">
+                              <Button
+                                variant="success"
+                                size="sm"
+                                onClick={() =>
+                                  handleEvaluate(sub.id, sub.player_id, true)
+                                }
+                              >
+                                <Check className="h-4 w-4 mr-1" /> Richtig
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() =>
+                                  handleEvaluate(sub.id, sub.player_id, false)
+                                }
+                              >
+                                <X className="h-4 w-4 mr-1" /> Falsch
+                              </Button>
+                            </div>
+                          ) : (
+                            <span
+                              className={`flex items-center gap-1.5 text-sm font-medium ${
+                                sub.is_correct
+                                  ? 'text-green-400'
+                                  : 'text-red-400'
+                              }`}
+                            >
+                              {sub.is_correct ? (
+                                <Check className="h-4 w-4" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
+                              {sub.is_correct ? 'Richtig' : 'Falsch'}
+                            </span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               )}
@@ -374,100 +443,95 @@ export default function HostScreen() {
 
             <div className="flex gap-3">
               {currentIdx > 0 && (
-                <button
-                  onClick={prevQuestion}
-                  className="rounded-lg border border-gray-700 px-6 py-2.5 font-medium text-gray-300 hover:border-gray-500 transition-colors"
-                >
-                  ← Vorherige Frage
-                </button>
+                <Button variant="outline" onClick={prevQuestion}>
+                  <ChevronLeft className="h-4 w-4 mr-1" /> Vorherige Frage
+                </Button>
               )}
-              <button
-                onClick={handleNextClick}
-                className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium hover:bg-blue-500 transition-colors"
-              >
-                {currentIdx < questions.length - 1
-                  ? 'Nächste Frage →'
-                  : 'Spiel beenden'}
-              </button>
+              <Button onClick={handleNextClick}>
+                {currentIdx < questions.length - 1 ? (
+                  <>
+                    Nächste Frage <ChevronRight className="h-4 w-4 ml-1" />
+                  </>
+                ) : (
+                  <>
+                    Spiel beenden <Square className="h-4 w-4 ml-1" />
+                  </>
+                )}
+              </Button>
             </div>
 
             {/* Skip Warning Modal */}
             {showSkipWarning && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-                <div className="rounded-xl border border-gray-700 bg-gray-900 p-6 max-w-sm mx-4 text-center">
-                  <p className="text-lg font-semibold mb-2">
-                    ⚠️ Nicht alle haben geantwortet
-                  </p>
-                  <p className="text-gray-400 mb-4">
-                    Erst {submissions.length} von {players.length} Spielern
-                    haben geantwortet. Trotzdem fortfahren?
-                  </p>
-                  <div className="flex gap-3 justify-center">
-                    <button
-                      onClick={() => setShowSkipWarning(false)}
-                      className="rounded-lg border border-gray-700 px-5 py-2 font-medium text-gray-300 hover:border-gray-500 transition-colors"
-                    >
-                      Abbrechen
-                    </button>
-                    <button
-                      onClick={confirmNext}
-                      className="rounded-lg bg-blue-600 px-5 py-2 font-medium hover:bg-blue-500 transition-colors"
-                    >
-                      {currentIdx < questions.length - 1
-                        ? 'Nächste Frage!'
-                        : 'Spiel beenden!'}
-                    </button>
-                  </div>
-                </div>
+                <Card className="max-w-sm mx-4 border-gray-700">
+                  <CardContent className="pt-6 text-center">
+                    <AlertTriangle className="h-10 w-10 text-yellow-400 mx-auto mb-3" />
+                    <p className="text-lg font-semibold mb-2">
+                      Nicht alle haben geantwortet
+                    </p>
+                    <p className="text-gray-400 mb-5">
+                      Erst {submissions.length} von {players.length} Spielern
+                      haben geantwortet. Trotzdem fortfahren?
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowSkipWarning(false)}
+                      >
+                        Abbrechen
+                      </Button>
+                      <Button onClick={confirmNext}>
+                        {currentIdx < questions.length - 1
+                          ? 'Nächste Frage!'
+                          : 'Spiel beenden!'}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             )}
-          </div>
+          </FadeIn>
         )
       )}
 
       {/* Finished */}
       {isFinished && (
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 text-center">
-          <p className="text-3xl mb-4">🏆</p>
-          <h2 className="text-2xl font-bold mb-4">
-            {scores.length > 0
-              ? `${scores[0].room_players?.nickname || 'Spieler'} hat gewonnen!`
-              : 'Spiel beendet!'}
-          </h2>
+        <FadeIn>
+          <Card className="text-center">
+            <CardContent className="pt-6">
+              <Trophy className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold mb-4">
+                {scores.length > 0
+                  ? `${scores[0].room_players?.nickname || 'Spieler'} hat gewonnen!`
+                  : 'Spiel beendet!'}
+              </h2>
 
-          {scores.length > 0 ? (
-            <div className="max-w-sm mx-auto">
-              {scores.map((s, idx) => (
-                <div
-                  key={s.id}
-                  className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0"
-                >
-                  <span>
-                    {idx === 0
-                      ? '🥇'
-                      : idx === 1
-                        ? '🥈'
-                        : idx === 2
-                          ? '🥉'
-                          : `${idx + 1}.`}{' '}
-                    {s.room_players?.nickname || 'Spieler'}
-                  </span>
-                  <span className="font-bold">{s.score} Pkt.</span>
+              {scores.length > 0 ? (
+                <div className="max-w-sm mx-auto">
+                  {scores.map((s, idx) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0"
+                    >
+                      <span className="flex items-center gap-2">
+                        {placeIcon(idx)}
+                        {s.room_players?.nickname || 'Spieler'}
+                      </span>
+                      <Badge>{s.score} Pkt.</Badge>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500">Keine Scores vorhanden.</p>
-          )}
+              ) : (
+                <p className="text-gray-500">Keine Scores vorhanden.</p>
+              )}
 
-          <Link
-            to="/"
-            className="mt-6 inline-block rounded-lg bg-blue-600 px-6 py-3 font-medium hover:bg-blue-500 transition-colors"
-          >
-            Zurück zur Startseite
-          </Link>
-        </div>
+              <Link to="/" className={buttonVariants({ className: 'mt-6' })}>
+                <Home className="h-4 w-4 mr-2" /> Zurück zur Startseite
+              </Link>
+            </CardContent>
+          </Card>
+        </FadeIn>
       )}
-    </div>
+    </PageTransition>
   );
 }
