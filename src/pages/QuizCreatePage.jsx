@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createQuiz, saveQuestions } from '../lib/supabase/api';
+import { GAME_MODES } from '../gameModes';
 
 function emptyQuestion() {
   return { question: '', answer: '', key: crypto.randomUUID() };
@@ -9,6 +10,7 @@ function emptyQuestion() {
 export default function QuizCreatePage() {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
+  const [quizType, setQuizType] = useState('qa');
   const [questions, setQuestions] = useState([emptyQuestion()]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -42,7 +44,7 @@ export default function QuizCreatePage() {
     setError(null);
 
     try {
-      const quiz = await createQuiz(title.trim());
+      const quiz = await createQuiz(title.trim(), quizType);
       await saveQuestions(quiz.id, validQuestions);
       navigate(`/quiz/${quiz.id}/edit`);
     } catch (err) {
@@ -81,6 +83,28 @@ export default function QuizCreatePage() {
           placeholder="z. B. Allgemeinwissen"
           className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2.5 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none"
         />
+      </div>
+
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-400 mb-2">
+          Spielmodus
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Object.entries(GAME_MODES).map(([key, mode]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setQuizType(key)}
+              className={`rounded-xl border p-4 text-left transition-all ${
+                quizType === key
+                  ? 'border-blue-500 bg-blue-950/50'
+                  : 'border-gray-800 bg-gray-900 hover:border-gray-600'
+              }`}
+            >
+              <span className="font-semibold">{mode.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="mb-6">

@@ -11,6 +11,7 @@ import {
   loadScores,
 } from '../lib/supabase/api';
 import { getHostToken } from '../lib/supabase/storage';
+import { GAME_MODES } from '../gameModes';
 
 export default function HostScreen() {
   const { code } = useParams();
@@ -28,6 +29,8 @@ export default function HostScreen() {
   const currentQuestion = questions[currentIdx] || null;
   const isWaiting = room?.status === 'waiting';
   const isFinished = room?.status === 'finished';
+  const quizType = room?.quizzes?.quiz_type || 'qa';
+  const ModeHostView = GAME_MODES[quizType]?.hostView;
 
   // Load room + questions + players
   useEffect(() => {
@@ -261,137 +264,144 @@ export default function HostScreen() {
       )}
 
       {/* Active Game */}
-      {room?.status === 'active' && currentQuestion && (
-        <div>
-          <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 mb-4">
-            <p className="text-sm text-gray-500 mb-1">
-              Frage {currentIdx + 1} / {questions.length}
-            </p>
-            <h2 className="text-xl font-semibold mb-2">
-              {currentQuestion.question}
-            </h2>
-            {currentQuestion.answer && (
-              <p className="text-sm text-gray-500">
-                Musterantwort:{' '}
-                <span className="text-gray-300">{currentQuestion.answer}</span>
+      {room?.status === 'active' && quizType !== 'qa' && ModeHostView ? (
+        <ModeHostView room={room} questions={questions} players={players} />
+      ) : (
+        room?.status === 'active' &&
+        currentQuestion && (
+          <div>
+            <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 mb-4">
+              <p className="text-sm text-gray-500 mb-1">
+                Frage {currentIdx + 1} / {questions.length}
               </p>
-            )}
-          </div>
+              <h2 className="text-xl font-semibold mb-2">
+                {currentQuestion.question}
+              </h2>
+              {currentQuestion.answer && (
+                <p className="text-sm text-gray-500">
+                  Musterantwort:{' '}
+                  <span className="text-gray-300">
+                    {currentQuestion.answer}
+                  </span>
+                </p>
+              )}
+            </div>
 
-          {/* Submissions */}
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold mb-3">
-              Antworten ({submissions.length} / {players.length})
-            </h3>
+            {/* Submissions */}
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold mb-3">
+                Antworten ({submissions.length} / {players.length})
+              </h3>
 
-            {submissions.length === 0 ? (
-              <p className="text-gray-500">Warte auf Antworten…</p>
-            ) : (
-              <div className="space-y-3">
-                {submissions.map((sub) => (
-                  <div
-                    key={sub.id}
-                    className={`rounded-xl border p-4 ${
-                      sub.is_correct === true
-                        ? 'border-green-700 bg-green-950/30'
-                        : sub.is_correct === false
-                          ? 'border-red-700 bg-red-950/30'
-                          : 'border-gray-800 bg-gray-900'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">
-                          {sub.room_players?.nickname || 'Spieler'}
-                        </p>
-                        <p className="text-gray-300">„{sub.answer_text}"</p>
-                      </div>
-
-                      {sub.is_correct === null ? (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() =>
-                              handleEvaluate(sub.id, sub.player_id, true)
-                            }
-                            className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium hover:bg-green-500"
-                          >
-                            ✓ Richtig
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleEvaluate(sub.id, sub.player_id, false)
-                            }
-                            className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium hover:bg-red-500"
-                          >
-                            ✗ Falsch
-                          </button>
+              {submissions.length === 0 ? (
+                <p className="text-gray-500">Warte auf Antworten…</p>
+              ) : (
+                <div className="space-y-3">
+                  {submissions.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className={`rounded-xl border p-4 ${
+                        sub.is_correct === true
+                          ? 'border-green-700 bg-green-950/30'
+                          : sub.is_correct === false
+                            ? 'border-red-700 bg-red-950/30'
+                            : 'border-gray-800 bg-gray-900'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">
+                            {sub.room_players?.nickname || 'Spieler'}
+                          </p>
+                          <p className="text-gray-300">„{sub.answer_text}"</p>
                         </div>
-                      ) : (
-                        <span
-                          className={`text-sm font-medium ${
-                            sub.is_correct ? 'text-green-400' : 'text-red-400'
-                          }`}
-                        >
-                          {sub.is_correct ? '✓ Richtig' : '✗ Falsch'}
-                        </span>
-                      )}
+
+                        {sub.is_correct === null ? (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() =>
+                                handleEvaluate(sub.id, sub.player_id, true)
+                              }
+                              className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium hover:bg-green-500"
+                            >
+                              ✓ Richtig
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleEvaluate(sub.id, sub.player_id, false)
+                              }
+                              className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium hover:bg-red-500"
+                            >
+                              ✗ Falsch
+                            </button>
+                          </div>
+                        ) : (
+                          <span
+                            className={`text-sm font-medium ${
+                              sub.is_correct ? 'text-green-400' : 'text-red-400'
+                            }`}
+                          >
+                            {sub.is_correct ? '✓ Richtig' : '✗ Falsch'}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          <div className="flex gap-3">
-            {currentIdx > 0 && (
+            <div className="flex gap-3">
+              {currentIdx > 0 && (
+                <button
+                  onClick={prevQuestion}
+                  className="rounded-lg border border-gray-700 px-6 py-2.5 font-medium text-gray-300 hover:border-gray-500 transition-colors"
+                >
+                  ← Vorherige Frage
+                </button>
+              )}
               <button
-                onClick={prevQuestion}
-                className="rounded-lg border border-gray-700 px-6 py-2.5 font-medium text-gray-300 hover:border-gray-500 transition-colors"
+                onClick={handleNextClick}
+                className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium hover:bg-blue-500 transition-colors"
               >
-                ← Vorherige Frage
+                {currentIdx < questions.length - 1
+                  ? 'Nächste Frage →'
+                  : 'Spiel beenden'}
               </button>
-            )}
-            <button
-              onClick={handleNextClick}
-              className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium hover:bg-blue-500 transition-colors"
-            >
-              {currentIdx < questions.length - 1
-                ? 'Nächste Frage →'
-                : 'Spiel beenden'}
-            </button>
-          </div>
+            </div>
 
-          {/* Skip Warning Modal */}
-          {showSkipWarning && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-              <div className="rounded-xl border border-gray-700 bg-gray-900 p-6 max-w-sm mx-4 text-center">
-                <p className="text-lg font-semibold mb-2">
-                  ⚠️ Nicht alle haben geantwortet
-                </p>
-                <p className="text-gray-400 mb-4">
-                  Erst {submissions.length} von {players.length} Spielern haben
-                  geantwortet. Trotzdem fortfahren?
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => setShowSkipWarning(false)}
-                    className="rounded-lg border border-gray-700 px-5 py-2 font-medium text-gray-300 hover:border-gray-500 transition-colors"
-                  >
-                    Abbrechen
-                  </button>
-                  <button
-                    onClick={confirmNext}
-                    className="rounded-lg bg-blue-600 px-5 py-2 font-medium hover:bg-blue-500 transition-colors"
-                  >
-                    {currentIdx < questions.length - 1
-                      ? 'Nächste Frage!'
-                      : 'Spiel beenden!'}
-                  </button>
+            {/* Skip Warning Modal */}
+            {showSkipWarning && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                <div className="rounded-xl border border-gray-700 bg-gray-900 p-6 max-w-sm mx-4 text-center">
+                  <p className="text-lg font-semibold mb-2">
+                    ⚠️ Nicht alle haben geantwortet
+                  </p>
+                  <p className="text-gray-400 mb-4">
+                    Erst {submissions.length} von {players.length} Spielern
+                    haben geantwortet. Trotzdem fortfahren?
+                  </p>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={() => setShowSkipWarning(false)}
+                      className="rounded-lg border border-gray-700 px-5 py-2 font-medium text-gray-300 hover:border-gray-500 transition-colors"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      onClick={confirmNext}
+                      className="rounded-lg bg-blue-600 px-5 py-2 font-medium hover:bg-blue-500 transition-colors"
+                    >
+                      {currentIdx < questions.length - 1
+                        ? 'Nächste Frage!'
+                        : 'Spiel beenden!'}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )
       )}
 
       {/* Finished */}

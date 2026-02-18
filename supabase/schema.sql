@@ -19,6 +19,7 @@ END $$;
 CREATE TABLE quizzes (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title      TEXT NOT NULL,
+  quiz_type  TEXT NOT NULL DEFAULT 'qa',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

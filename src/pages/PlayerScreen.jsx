@@ -8,6 +8,7 @@ import {
 } from '../lib/supabase/api';
 import { getPlayerData } from '../lib/supabase/storage';
 import { supabase } from '../lib/supabaseClient';
+import { GAME_MODES } from '../gameModes';
 
 export default function PlayerScreen() {
   const { code } = useParams();
@@ -123,6 +124,8 @@ export default function PlayerScreen() {
 
   const isWaiting = room?.status === 'waiting';
   const isFinished = room?.status === 'finished';
+  const quizType = room?.quizzes?.quiz_type || 'qa';
+  const ModePlayerView = GAME_MODES[quizType]?.playerView;
 
   return (
     <div>
@@ -152,66 +155,77 @@ export default function PlayerScreen() {
         </div>
       )}
 
-      {/* Active – show question */}
-      {room?.status === 'active' && currentQuestion && !submitted && (
-        <div>
-          <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 mb-4">
-            <p className="text-sm text-gray-500 mb-1">Frage</p>
-            <h2 className="text-xl font-semibold">
-              {currentQuestion.question}
-            </h2>
-          </div>
+      {/* Active Game */}
+      {room?.status === 'active' && quizType !== 'qa' && ModePlayerView ? (
+        <ModePlayerView
+          room={room}
+          question={currentQuestion}
+          playerData={playerData}
+        />
+      ) : (
+        <>
+          {/* Active – show question */}
+          {room?.status === 'active' && currentQuestion && !submitted && (
+            <div>
+              <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 mb-4">
+                <p className="text-sm text-gray-500 mb-1">Frage</p>
+                <h2 className="text-xl font-semibold">
+                  {currentQuestion.question}
+                </h2>
+              </div>
 
-          <form onSubmit={handleSubmit}>
-            <textarea
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder="Deine Antwort…"
-              rows={3}
-              className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none mb-4 resize-none"
-            />
-            <button
-              type="submit"
-              disabled={!answer.trim()}
-              className="w-full rounded-lg bg-blue-600 px-6 py-3 text-lg font-medium hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              <form onSubmit={handleSubmit}>
+                <textarea
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  placeholder="Deine Antwort…"
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none mb-4 resize-none"
+                />
+                <button
+                  type="submit"
+                  disabled={!answer.trim()}
+                  className="w-full rounded-lg bg-blue-600 px-6 py-3 text-lg font-medium hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Antwort senden
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Submitted – waiting for evaluation */}
+          {room?.status === 'active' && submitted && result === null && (
+            <div className="rounded-xl border border-gray-800 bg-gray-900 p-8 text-center">
+              <p className="text-4xl mb-4">📨</p>
+              <h2 className="text-xl font-semibold mb-2">Antwort gesendet!</h2>
+              <p className="text-gray-500">Warte auf Bewertung…</p>
+            </div>
+          )}
+
+          {/* Evaluated */}
+          {room?.status === 'active' && submitted && result !== null && (
+            <div
+              className={`rounded-xl border p-8 text-center ${
+                result
+                  ? 'border-green-700 bg-green-950/30'
+                  : 'border-red-700 bg-red-950/30'
+              }`}
             >
-              Antwort senden
-            </button>
-          </form>
-        </div>
-      )}
+              <p className="text-4xl mb-4">{result ? '✅' : '❌'}</p>
+              <h2 className="text-xl font-semibold mb-2">
+                {result ? 'Richtig!' : 'Leider falsch.'}
+              </h2>
+              <p className="text-gray-400">Warte auf die nächste Frage…</p>
+            </div>
+          )}
 
-      {/* Submitted – waiting for evaluation */}
-      {room?.status === 'active' && submitted && result === null && (
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-8 text-center">
-          <p className="text-4xl mb-4">📨</p>
-          <h2 className="text-xl font-semibold mb-2">Antwort gesendet!</h2>
-          <p className="text-gray-500">Warte auf Bewertung…</p>
-        </div>
-      )}
-
-      {/* Evaluated */}
-      {room?.status === 'active' && submitted && result !== null && (
-        <div
-          className={`rounded-xl border p-8 text-center ${
-            result
-              ? 'border-green-700 bg-green-950/30'
-              : 'border-red-700 bg-red-950/30'
-          }`}
-        >
-          <p className="text-4xl mb-4">{result ? '✅' : '❌'}</p>
-          <h2 className="text-xl font-semibold mb-2">
-            {result ? 'Richtig!' : 'Leider falsch.'}
-          </h2>
-          <p className="text-gray-400">Warte auf die nächste Frage…</p>
-        </div>
-      )}
-
-      {/* Active but no question yet */}
-      {room?.status === 'active' && !currentQuestion && (
-        <div className="rounded-xl border border-gray-800 bg-gray-900 p-8 text-center">
-          <p className="text-gray-500">Warte auf die erste Frage…</p>
-        </div>
+          {/* Active but no question yet */}
+          {room?.status === 'active' && !currentQuestion && (
+            <div className="rounded-xl border border-gray-800 bg-gray-900 p-8 text-center">
+              <p className="text-gray-500">Warte auf die erste Frage…</p>
+            </div>
+          )}
+        </>
       )}
 
       {/* Finished */}

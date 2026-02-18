@@ -33,10 +33,10 @@ export async function loadQuiz(id) {
   return data;
 }
 
-export async function createQuiz(title) {
+export async function createQuiz(title, quizType = 'qa') {
   const { data, error } = await supabase
     .from('quizzes')
-    .insert({ title })
+    .insert({ title, quiz_type: quizType })
     .select()
     .single();
   if (error) throw error;
@@ -105,7 +105,7 @@ export async function createRoom(quizId) {
 export async function loadRoomByCode(code) {
   const { data, error } = await supabase
     .from('rooms')
-    .select('*, quizzes(title)')
+    .select('*, quizzes(title, quiz_type)')
     .eq('room_code', code.toUpperCase())
     .single();
   if (error) throw error;
