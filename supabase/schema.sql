@@ -117,7 +117,7 @@ ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE room_scores ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------------------------
--- quizzes: Jeder darf lesen und erstellen
+-- quizzes: Jeder darf lesen, erstellen und bearbeiten
 -- ------------------------------------------------------------
 CREATE POLICY "quizzes_select" ON quizzes
   FOR SELECT USING (true);
@@ -125,14 +125,28 @@ CREATE POLICY "quizzes_select" ON quizzes
 CREATE POLICY "quizzes_insert" ON quizzes
   FOR INSERT WITH CHECK (true);
 
+CREATE POLICY "quizzes_update" ON quizzes
+  FOR UPDATE USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "quizzes_delete" ON quizzes
+  FOR DELETE USING (true);
+
 -- ------------------------------------------------------------
--- quiz_questions: Jeder darf lesen und erstellen
+-- quiz_questions: Jeder darf lesen, erstellen, bearbeiten und löschen
 -- ------------------------------------------------------------
 CREATE POLICY "quiz_questions_select" ON quiz_questions
   FOR SELECT USING (true);
 
 CREATE POLICY "quiz_questions_insert" ON quiz_questions
   FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "quiz_questions_update" ON quiz_questions
+  FOR UPDATE USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "quiz_questions_delete" ON quiz_questions
+  FOR DELETE USING (true);
 
 -- ------------------------------------------------------------
 -- rooms: Jeder darf lesen und erstellen
