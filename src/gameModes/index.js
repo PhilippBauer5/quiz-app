@@ -11,7 +11,7 @@ export const GAME_MODES = {
   },
   true_false: {
     label: 'Wahr und Lüge',
-    hostView: TrueFalseHostView,
+    hostView: null,
     playerView: TrueFalsePlayerView,
   },
 };

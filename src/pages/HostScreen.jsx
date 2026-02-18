@@ -62,12 +62,33 @@ export default function HostScreen() {
   const refreshSubmissions = useCallback(async () => {
     if (!room || !currentQuestion) return;
     try {
-      const subs = await loadSubmissions(room.id, currentQuestion.id);
+      let subs = await loadSubmissions(room.id, currentQuestion.id);
+
+      // Auto-evaluate true_false submissions
+      if (quizType === 'true_false' && currentQuestion.answer) {
+        const unevaluated = subs.filter((s) => s.is_correct === null);
+        for (const sub of unevaluated) {
+          const isCorrect =
+            sub.answer_text.toLowerCase().trim() ===
+            currentQuestion.answer.toLowerCase().trim();
+          await evaluateSubmission(sub.id, isCorrect);
+          if (isCorrect) {
+            const sc = await loadScores(room.id);
+            const existing = sc.find((s) => s.player_id === sub.player_id);
+            const newScore = (existing?.score || 0) + 1;
+            await upsertScore(room.id, sub.player_id, newScore);
+          }
+        }
+        if (unevaluated.length > 0) {
+          subs = await loadSubmissions(room.id, currentQuestion.id);
+        }
+      }
+
       setSubmissions(subs);
     } catch (err) {
       console.error('loadSubmissions error:', err);
     }
-  }, [room, currentQuestion]);
+  }, [room, currentQuestion, quizType]);
 
   useEffect(() => {
     refreshSubmissions();

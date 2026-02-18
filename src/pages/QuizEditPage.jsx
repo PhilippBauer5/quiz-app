@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { loadQuiz, loadQuestions, saveQuestions, updateQuiz } from '../lib/supabase/api';
+import {
+  loadQuiz,
+  loadQuestions,
+  saveQuestions,
+  updateQuiz,
+} from '../lib/supabase/api';
 
 function questionWithKey(q) {
   return { ...q, key: q.id || crypto.randomUUID() };
@@ -85,7 +90,10 @@ export default function QuizEditPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Quiz bearbeiten</h1>
-        <Link to="/quizzes" className="text-sm text-gray-500 hover:text-gray-300">
+        <Link
+          to="/quizzes"
+          className="text-sm text-gray-500 hover:text-gray-300"
+        >
           ← Zurück
         </Link>
       </div>
@@ -103,7 +111,9 @@ export default function QuizEditPage() {
       )}
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-400 mb-1">Titel</label>
+        <label className="block text-sm font-medium text-gray-400 mb-1">
+          Titel
+        </label>
         <input
           type="text"
           value={title}
@@ -113,13 +123,20 @@ export default function QuizEditPage() {
       </div>
 
       <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">Fragen ({questions.length})</h2>
+        <h2 className="text-lg font-semibold mb-3">
+          Fragen ({questions.length})
+        </h2>
 
         <div className="space-y-4">
           {questions.map((q, idx) => (
-            <div key={q.key} className="rounded-xl border border-gray-800 bg-gray-900 p-4">
+            <div
+              key={q.key}
+              className="rounded-xl border border-gray-800 bg-gray-900 p-4"
+            >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-500">Frage {idx + 1}</span>
+                <span className="text-sm font-medium text-gray-500">
+                  Frage {idx + 1}
+                </span>
                 {questions.length > 1 && (
                   <button
                     onClick={() => removeQuestion(q.key)}
@@ -133,18 +150,49 @@ export default function QuizEditPage() {
               <input
                 type="text"
                 value={q.question}
-                onChange={(e) => updateQuestion(q.key, 'question', e.target.value)}
+                onChange={(e) =>
+                  updateQuestion(q.key, 'question', e.target.value)
+                }
                 placeholder="Frage eingeben…"
                 className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none mb-2"
               />
 
-              <input
-                type="text"
-                value={q.answer || ''}
-                onChange={(e) => updateQuestion(q.key, 'answer', e.target.value)}
-                placeholder="Musterantwort (optional)"
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-              />
+              {quiz?.quiz_type === 'true_false' ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => updateQuestion(q.key, 'answer', 'Wahr')}
+                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      q.answer === 'Wahr'
+                        ? 'bg-green-600 text-white'
+                        : 'border border-gray-700 bg-gray-800 text-gray-400 hover:border-green-500'
+                    }`}
+                  >
+                    ✓ Wahr
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateQuestion(q.key, 'answer', 'Falsch')}
+                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      q.answer === 'Falsch'
+                        ? 'bg-red-600 text-white'
+                        : 'border border-gray-700 bg-gray-800 text-gray-400 hover:border-red-500'
+                    }`}
+                  >
+                    ✗ Falsch
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={q.answer || ''}
+                  onChange={(e) =>
+                    updateQuestion(q.key, 'answer', e.target.value)
+                  }
+                  placeholder="Musterantwort (optional)"
+                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+                />
+              )}
             </div>
           ))}
         </div>
