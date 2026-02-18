@@ -66,6 +66,13 @@ export async function loadQuestions(quizId) {
 }
 
 export async function saveQuestions(quizId, questions) {
+  // Clear current_question_id in any rooms that reference this quiz's questions
+  const { error: clearError } = await supabase
+    .from('rooms')
+    .update({ current_question_id: null })
+    .eq('quiz_id', quizId);
+  if (clearError) throw clearError;
+
   // Delete existing, then insert fresh (simple & robust)
   const { error: delError } = await supabase
     .from('quiz_questions')
