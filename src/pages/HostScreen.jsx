@@ -71,6 +71,19 @@ export default function HostScreen() {
     return () => clearInterval(interval);
   }, [refreshSubmissions]);
 
+  // Load scores when game finishes
+  useEffect(() => {
+    if (!room || !isFinished) return;
+    (async () => {
+      try {
+        const sc = await loadScores(room.id);
+        setScores(sc);
+      } catch (err) {
+        console.error('loadScores error:', err);
+      }
+    })();
+  }, [room, isFinished]);
+
   // Refresh players periodically when waiting
   useEffect(() => {
     if (!room || !isWaiting) return;
@@ -105,8 +118,6 @@ export default function HostScreen() {
       try {
         const updated = await updateRoom(room.id, { status: 'finished' });
         setRoom(updated);
-        const sc = await loadScores(room.id);
-        setScores(sc);
       } catch (err) {
         setError(err.message);
       }
@@ -305,14 +316,31 @@ export default function HostScreen() {
             )}
           </div>
 
-          <button
-            onClick={nextQuestion}
-            className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium hover:bg-blue-500 transition-colors"
-          >
-            {currentIdx < questions.length - 1
-              ? 'Nächste Frage →'
-              : 'Spiel beenden'}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={nextQuestion}
+              className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium hover:bg-blue-500 transition-colors"
+            >
+              {currentIdx < questions.length - 1
+                ? 'Nächste Frage →'
+                : 'Spiel beenden'}
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const updated = await updateRoom(room.id, {
+                    status: 'finished',
+                  });
+                  setRoom(updated);
+                } catch (err) {
+                  setError(err.message);
+                }
+              }}
+              className="rounded-lg border border-red-700 px-6 py-2.5 font-medium text-red-400 hover:bg-red-900/40 transition-colors"
+            >
+              Spiel beenden
+            </button>
+          </div>
         </div>
       )}
 
@@ -320,7 +348,11 @@ export default function HostScreen() {
       {isFinished && (
         <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 text-center">
           <p className="text-3xl mb-4">🏆</p>
-          <h2 className="text-2xl font-bold mb-4">Spiel beendet!</h2>
+          <h2 className="text-2xl font-bold mb-4">
+            {scores.length > 0
+              ? `${scores[0].room_players?.nickname || 'Spieler'} hat gewonnen!`
+              : 'Spiel beendet!'}
+          </h2>
 
           {scores.length > 0 ? (
             <div className="max-w-sm mx-auto">
@@ -346,6 +378,13 @@ export default function HostScreen() {
           ) : (
             <p className="text-gray-500">Keine Scores vorhanden.</p>
           )}
+
+          <Link
+            to="/"
+            className="mt-6 inline-block rounded-lg bg-blue-600 px-6 py-3 font-medium hover:bg-blue-500 transition-colors"
+          >
+            Zurück zur Startseite
+          </Link>
         </div>
       )}
     </div>
