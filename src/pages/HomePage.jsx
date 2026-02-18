@@ -43,8 +43,8 @@ export default function HomePage() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         {cards.map((card, i) => (
-          <FadeIn key={card.to} delay={i * 0.08}>
-            <ScaleOnHover>
+          <FadeIn key={card.to} delay={i * 0.08} className="h-full">
+            <ScaleOnHover className="h-full">
               <Link to={card.to} className="block h-full">
                 <Card className="h-full hover:border-gray-600 transition-colors">
                   <CardContent className="p-6 flex flex-col h-full">
