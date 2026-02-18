@@ -140,15 +140,42 @@ export default function QuizCreatePage() {
                 className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white placeholder-gray-600 focus:border-blue-500 focus:outline-none mb-2"
               />
 
-              <input
-                type="text"
-                value={q.answer}
-                onChange={(e) =>
-                  updateQuestion(q.key, 'answer', e.target.value)
-                }
-                placeholder="Musterantwort (optional)"
-                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-              />
+              {quizType === 'true_false' ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => updateQuestion(q.key, 'answer', 'Wahr')}
+                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      q.answer === 'Wahr'
+                        ? 'bg-green-600 text-white'
+                        : 'border border-gray-700 bg-gray-800 text-gray-400 hover:border-green-500'
+                    }`}
+                  >
+                    ✓ Wahr
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateQuestion(q.key, 'answer', 'Falsch')}
+                    className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      q.answer === 'Falsch'
+                        ? 'bg-red-600 text-white'
+                        : 'border border-gray-700 bg-gray-800 text-gray-400 hover:border-red-500'
+                    }`}
+                  >
+                    ✗ Falsch
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={q.answer}
+                  onChange={(e) =>
+                    updateQuestion(q.key, 'answer', e.target.value)
+                  }
+                  placeholder="Musterantwort (optional)"
+                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+                />
+              )}
             </div>
           ))}
         </div>
