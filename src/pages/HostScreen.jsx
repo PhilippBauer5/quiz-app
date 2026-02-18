@@ -316,31 +316,14 @@ export default function HostScreen() {
             )}
           </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={nextQuestion}
-              className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium hover:bg-blue-500 transition-colors"
-            >
-              {currentIdx < questions.length - 1
-                ? 'Nächste Frage →'
-                : 'Spiel beenden'}
-            </button>
-            <button
-              onClick={async () => {
-                try {
-                  const updated = await updateRoom(room.id, {
-                    status: 'finished',
-                  });
-                  setRoom(updated);
-                } catch (err) {
-                  setError(err.message);
-                }
-              }}
-              className="rounded-lg border border-red-700 px-6 py-2.5 font-medium text-red-400 hover:bg-red-900/40 transition-colors"
-            >
-              Spiel beenden
-            </button>
-          </div>
+          <button
+            onClick={nextQuestion}
+            className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium hover:bg-blue-500 transition-colors"
+          >
+            {currentIdx < questions.length - 1
+              ? 'Nächste Frage →'
+              : 'Spiel beenden'}
+          </button>
         </div>
       )}
 
