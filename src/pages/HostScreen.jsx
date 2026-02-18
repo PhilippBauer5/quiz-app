@@ -22,6 +22,7 @@ export default function HostScreen() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showSkipWarning, setShowSkipWarning] = useState(false);
 
   const hostToken = getHostToken(code);
   const currentQuestion = questions[currentIdx] || null;
@@ -112,7 +113,17 @@ export default function HostScreen() {
     }
   }
 
-  async function nextQuestion() {
+  function handleNextClick() {
+    const allAnswered = submissions.length >= players.length;
+    if (!allAnswered && players.length > 0) {
+      setShowSkipWarning(true);
+      return;
+    }
+    confirmNext();
+  }
+
+  async function confirmNext() {
+    setShowSkipWarning(false);
     if (currentIdx >= questions.length - 1) {
       // Game finished
       try {
@@ -131,6 +142,21 @@ export default function HostScreen() {
       });
       setRoom(updated);
       setCurrentIdx(nextIdx);
+      setSubmissions([]);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function prevQuestion() {
+    if (currentIdx <= 0) return;
+    const prevIdx = currentIdx - 1;
+    try {
+      const updated = await updateRoom(room.id, {
+        current_question_id: questions[prevIdx].id,
+      });
+      setRoom(updated);
+      setCurrentIdx(prevIdx);
       setSubmissions([]);
     } catch (err) {
       setError(err.message);
@@ -316,14 +342,55 @@ export default function HostScreen() {
             )}
           </div>
 
-          <button
-            onClick={nextQuestion}
-            className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium hover:bg-blue-500 transition-colors"
-          >
-            {currentIdx < questions.length - 1
-              ? 'Nächste Frage →'
-              : 'Spiel beenden'}
-          </button>
+          <div className="flex gap-3">
+            {currentIdx > 0 && (
+              <button
+                onClick={prevQuestion}
+                className="rounded-lg border border-gray-700 px-6 py-2.5 font-medium text-gray-300 hover:border-gray-500 transition-colors"
+              >
+                ← Vorherige Frage
+              </button>
+            )}
+            <button
+              onClick={handleNextClick}
+              className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium hover:bg-blue-500 transition-colors"
+            >
+              {currentIdx < questions.length - 1
+                ? 'Nächste Frage →'
+                : 'Spiel beenden'}
+            </button>
+          </div>
+
+          {/* Skip Warning Modal */}
+          {showSkipWarning && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+              <div className="rounded-xl border border-gray-700 bg-gray-900 p-6 max-w-sm mx-4 text-center">
+                <p className="text-lg font-semibold mb-2">
+                  ⚠️ Nicht alle haben geantwortet
+                </p>
+                <p className="text-gray-400 mb-4">
+                  Erst {submissions.length} von {players.length} Spielern haben
+                  geantwortet. Trotzdem fortfahren?
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => setShowSkipWarning(false)}
+                    className="rounded-lg border border-gray-700 px-5 py-2 font-medium text-gray-300 hover:border-gray-500 transition-colors"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    onClick={confirmNext}
+                    className="rounded-lg bg-blue-600 px-5 py-2 font-medium hover:bg-blue-500 transition-colors"
+                  >
+                    {currentIdx < questions.length - 1
+                      ? 'Nächste Frage!'
+                      : 'Spiel beenden!'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
