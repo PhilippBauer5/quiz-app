@@ -1,145 +1,212 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { updateRoom, loadSubmissions } from '../../lib/supabase/api';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { FadeIn } from '../../components/ui/Animations';
-import { Users, CheckCircle, Clock, Trophy, Award } from 'lucide-react';
+import {
+  ChevronRight,
+  Square,
+  Users,
+  CheckCircle,
+  Clock,
+  List,
+} from 'lucide-react';
 
 /**
- * Blind Top 5 – HostView
+ * Blind Top 5 – HostView (host-gesteuert, kein Scoring)
  *
- * Shows:
- * - The quiz title
- * - Each player's progress (how many items placed out of 5)
- * - The correct ranking (revealed after all players finish or host decides)
+ * Der Host deckt Items nacheinander auf (Next-Button).
+ * Zeigt den Einreichungsstatus der Spieler pro Item.
+ * Nach dem letzten Item: Zusammenfassung aller Rankings (ohne Punkte).
+ * "Spiel beenden" setzt status → finished.
  */
 export default function BlindTop5HostView({ room, questions, players }) {
-  const [items, setItems] = useState([]);
-  const [playerProgress, setPlayerProgress] = useState({}); // { playerId: count }
-  const [showResults, setShowResults] = useState(false);
-  const [playerPlacements, setPlayerPlacements] = useState({}); // { playerId: { itemId: pos } }
-  const [scores, setScores] = useState({}); // { playerId: score }
+  const [submissions, setSubmissions] = useState([]);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [showSummary, setShowSummary] = useState(false);
+  const [allPlacements, setAllPlacements] = useState({}); // { playerId: { itemId: pos } }
 
-  // Items sorted by correct position
+  // Sync currentIdx from room state
   useEffect(() => {
-    if (questions?.length) {
-      const sorted = [...questions].sort((a, b) => a.position - b.position);
-      setItems(sorted);
-    }
-  }, [questions]);
+    if (!room?.current_question_id || !questions.length) return;
+    const idx = questions.findIndex((q) => q.id === room.current_question_id);
+    if (idx >= 0) setCurrentIdx(idx);
+  }, [room?.current_question_id, questions]);
 
-  // Poll player progress
-  const refreshProgress = useCallback(async () => {
-    if (!room?.id || items.length === 0 || players.length === 0) return;
+  const currentQuestion = questions[currentIdx] || null;
+
+  // Poll submissions for the current item
+  const refreshSubmissions = useCallback(async () => {
+    if (!room?.id || !currentQuestion?.id) return;
     try {
-      const itemIds = items.map((i) => i.id);
-      const { data: subs } = await supabase
-        .from('submissions')
-        .select('player_id, question_id, answer_text')
-        .eq('room_id', room.id)
-        .in('question_id', itemIds);
-
-      if (!subs) return;
-
-      // Count submissions per player
-      const progress = {};
-      const placements = {};
-      for (const sub of subs) {
-        progress[sub.player_id] = (progress[sub.player_id] || 0) + 1;
-
-        if (!placements[sub.player_id]) placements[sub.player_id] = {};
-        try {
-          const parsed = JSON.parse(sub.answer_text);
-          placements[sub.player_id][sub.question_id] = parsed.chosen_position;
-        } catch {
-          // ignore
-        }
-      }
-      setPlayerProgress(progress);
-      setPlayerPlacements(placements);
+      const subs = await loadSubmissions(room.id, currentQuestion.id);
+      setSubmissions(subs || []);
     } catch (err) {
-      console.error('refreshProgress error:', err);
+      console.error('refreshSubmissions error:', err);
     }
-  }, [room?.id, items, players]);
+  }, [room?.id, currentQuestion?.id]);
 
   useEffect(() => {
-    refreshProgress();
-    const interval = setInterval(refreshProgress, 3000);
+    refreshSubmissions();
+    const interval = setInterval(refreshSubmissions, 3000);
     return () => clearInterval(interval);
-  }, [refreshProgress]);
+  }, [refreshSubmissions]);
 
-  // Calculate scores when results are shown
-  useEffect(() => {
-    if (!showResults) return;
-    const newScores = {};
-    for (const player of players) {
-      let score = 0;
-      const pl = playerPlacements[player.id] || {};
-      for (const item of items) {
-        const chosenPos = pl[item.id];
-        const correctPos = item.position + 1; // position is 0-indexed in DB
-        if (chosenPos === correctPos) {
-          score += 2; // Exact match
-        } else if (chosenPos && Math.abs(chosenPos - correctPos) === 1) {
-          score += 1; // Off by one
-        }
+  // Load all placements for summary view
+  const loadAllPlacements = useCallback(async () => {
+    if (!room?.id || !questions.length) return;
+    const itemIds = questions.map((q) => q.id);
+    const { data: subs } = await supabase
+      .from('submissions')
+      .select('player_id, question_id, answer_text')
+      .eq('room_id', room.id)
+      .in('question_id', itemIds);
+
+    if (!subs) return;
+    const placements = {};
+    for (const sub of subs) {
+      if (!placements[sub.player_id]) placements[sub.player_id] = {};
+      try {
+        const parsed = JSON.parse(sub.answer_text);
+        placements[sub.player_id][sub.question_id] = parsed.chosen_position;
+      } catch {
+        // ignore
       }
-      newScores[player.id] = score;
     }
-    setScores(newScores);
-  }, [showResults, playerPlacements, items, players]);
+    setAllPlacements(placements);
+  }, [room?.id, questions]);
 
-  const allFinished =
-    players.length > 0 &&
-    players.every((p) => (playerProgress[p.id] || 0) >= 5);
+  // ── Navigation ──
+  async function nextQuestion() {
+    if (currentIdx >= questions.length - 1) {
+      // Last item → show summary
+      await loadAllPlacements();
+      setShowSummary(true);
+      return;
+    }
 
+    const nextIdx = currentIdx + 1;
+    try {
+      await updateRoom(room.id, {
+        current_question_id: questions[nextIdx].id,
+      });
+      setCurrentIdx(nextIdx);
+      setSubmissions([]);
+    } catch (err) {
+      console.error('nextQuestion error:', err);
+    }
+  }
+
+  async function finishGame() {
+    try {
+      await updateRoom(room.id, { status: 'finished' });
+    } catch (err) {
+      console.error('finishGame error:', err);
+    }
+  }
+
+  // ── Summary view ──
+  if (showSummary) {
+    return (
+      <FadeIn>
+        <Card className="mb-4">
+          <CardContent className="pt-5 pb-4">
+            <h2 className="text-lg font-bold mb-1">
+              {room?.quizzes?.title || 'Blind Top 5'}
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Alle Platzierungen im Überblick
+            </p>
+
+            {players.map((player) => {
+              const pl = allPlacements[player.id] || {};
+              const ranking = [1, 2, 3, 4, 5].map((pos) => {
+                const itemId = Object.keys(pl).find((id) => pl[id] === pos);
+                const item = questions.find((q) => q.id === itemId);
+                return { position: pos, item };
+              });
+
+              return (
+                <div key={player.id} className="mb-5 last:mb-0">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-2">
+                    {player.nickname}
+                  </h3>
+                  <div className="space-y-1">
+                    {ranking.map(({ position, item }) => (
+                      <div
+                        key={position}
+                        className="flex items-center gap-2 text-sm rounded-lg px-3 py-1.5 bg-gray-800/50"
+                      >
+                        <Badge className="shrink-0 w-7 justify-center text-xs">
+                          {position}
+                        </Badge>
+                        <span className={item ? '' : 'text-gray-600'}>
+                          {item?.question || '— nicht eingeordnet —'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        <Button onClick={finishGame} className="w-full" size="lg">
+          <Square className="h-4 w-4 mr-2" />
+          Spiel beenden
+        </Button>
+      </FadeIn>
+    );
+  }
+
+  // ── Active game view ──
   return (
     <FadeIn>
       <Card className="mb-4">
         <CardContent className="pt-5 pb-4">
-          <h2 className="text-lg font-bold mb-1">
-            {room?.quizzes?.title || 'Blind Top 5'}
-          </h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Spieler ordnen Items den Plätzen 1–5 zu
-          </p>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold">
+              {room?.quizzes?.title || 'Blind Top 5'}
+            </h2>
+            <Badge variant="secondary">
+              Item {currentIdx + 1} / {questions.length}
+            </Badge>
+          </div>
 
-          {/* Player progress */}
-          <div className="space-y-2 mb-4">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="rounded-lg border border-blue-700/50 bg-blue-950/20 px-4 py-3 mb-4">
+            <p className="text-xl font-semibold">
+              {currentQuestion?.question || '…'}
+            </p>
+          </div>
+
+          {/* Player submission status */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-1">
               <Users className="h-4 w-4 text-gray-400" />
-              <span className="text-sm font-medium text-gray-300">
-                Spieler-Fortschritt
+              <span className="text-sm text-gray-400">
+                Antworten: {submissions.length} / {players.length}
               </span>
             </div>
-
             {players.map((player) => {
-              const count = playerProgress[player.id] || 0;
-              const done = count >= 5;
+              const hasSub = submissions.some((s) => s.player_id === player.id);
               return (
                 <div
                   key={player.id}
                   className={`flex items-center justify-between rounded-lg px-3 py-2 border ${
-                    done
+                    hasSub
                       ? 'border-green-700/50 bg-green-950/20'
                       : 'border-gray-700/50 bg-gray-900/50'
                   }`}
                 >
-                  <span className="text-sm font-medium">
-                    {player.nickname}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={done ? 'default' : 'secondary'}>
-                      {count} / 5
-                    </Badge>
-                    {done && (
-                      <CheckCircle className="h-4 w-4 text-green-400" />
-                    )}
-                    {!done && (
-                      <Clock className="h-4 w-4 text-gray-500" />
-                    )}
-                  </div>
+                  <span className="text-sm">{player.nickname}</span>
+                  {hasSub ? (
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                  ) : (
+                    <Clock className="h-4 w-4 text-gray-500" />
+                  )}
                 </div>
               );
             })}
@@ -148,122 +215,21 @@ export default function BlindTop5HostView({ room, questions, players }) {
               <p className="text-sm text-gray-500">Keine Spieler.</p>
             )}
           </div>
-
-          {/* Show results button */}
-          {!showResults && (
-            <Button
-              onClick={() => setShowResults(true)}
-              disabled={!allFinished && players.length > 0}
-              className="w-full"
-              variant={allFinished ? 'success' : 'outline'}
-            >
-              <Trophy className="h-4 w-4 mr-2" />
-              {allFinished
-                ? 'Ergebnisse anzeigen'
-                : 'Warte auf alle Spieler…'}
-            </Button>
-          )}
         </CardContent>
       </Card>
 
-      {/* Results */}
-      {showResults && (
-        <FadeIn>
-          {/* Correct ranking */}
-          <Card className="mb-4">
-            <CardContent className="pt-5 pb-4">
-              <h3 className="text-base font-semibold mb-3">
-                Richtige Reihenfolge
-              </h3>
-              <div className="space-y-1.5">
-                {items.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 border border-green-700/30 bg-green-950/10"
-                  >
-                    <Badge className="shrink-0 w-8 justify-center">
-                      {idx + 1}
-                    </Badge>
-                    <span className="text-sm">{item.question}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Player scores */}
-          <Card>
-            <CardContent className="pt-5 pb-4">
-              <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-yellow-400" />
-                Ergebnis
-              </h3>
-              <p className="text-xs text-gray-500 mb-3">
-                2 Punkte = exakter Treffer, 1 Punkt = um eins daneben
-              </p>
-              <div className="space-y-2">
-                {players
-                  .map((p) => ({ ...p, score: scores[p.id] || 0 }))
-                  .sort((a, b) => b.score - a.score)
-                  .map((player, idx) => (
-                    <div
-                      key={player.id}
-                      className="flex items-center justify-between rounded-lg px-3 py-2 border border-gray-700/50 bg-gray-900/50"
-                    >
-                      <span className="flex items-center gap-2 text-sm">
-                        {idx === 0 && players.length > 1 && (
-                          <Award className="h-4 w-4 text-yellow-400" />
-                        )}
-                        {player.nickname}
-                      </span>
-                      <Badge>{player.score} / 10 Pkt.</Badge>
-                    </div>
-                  ))}
-              </div>
-
-              {/* Detailed breakdown */}
-              <div className="mt-4 space-y-3">
-                {players.map((player) => {
-                  const pl = playerPlacements[player.id] || {};
-                  return (
-                    <details key={player.id} className="group">
-                      <summary className="cursor-pointer text-sm text-gray-400 hover:text-gray-200 transition-colors">
-                        {player.nickname} – Details
-                      </summary>
-                      <div className="mt-2 space-y-1 pl-2">
-                        {items.map((item, idx) => {
-                          const chosen = pl[item.id];
-                          const correct = idx + 1;
-                          const isExact = chosen === correct;
-                          const isClose =
-                            chosen && Math.abs(chosen - correct) === 1;
-                          return (
-                            <div
-                              key={item.id}
-                              className={`text-xs rounded px-2 py-1 ${
-                                isExact
-                                  ? 'text-green-400 bg-green-950/30'
-                                  : isClose
-                                    ? 'text-yellow-400 bg-yellow-950/20'
-                                    : 'text-red-400 bg-red-950/20'
-                              }`}
-                            >
-                              {item.question}: Platz {chosen ?? '?'} (richtig:{' '}
-                              {correct})
-                              {isExact && ' ✓'}
-                              {isClose && ' ~'}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </details>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </FadeIn>
-      )}
+      <Button onClick={nextQuestion} className="w-full" size="lg">
+        {currentIdx < questions.length - 1 ? (
+          <>
+            Nächstes Item <ChevronRight className="h-4 w-4 ml-1" />
+          </>
+        ) : (
+          <>
+            <List className="h-4 w-4 mr-2" />
+            Ergebnisse anzeigen
+          </>
+        )}
+      </Button>
     </FadeIn>
   );
 }
