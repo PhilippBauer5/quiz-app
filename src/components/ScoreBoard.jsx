@@ -8,11 +8,13 @@ import { Trophy } from 'lucide-react';
  *
  * Props:
  *  - scores: [{ player_id, score, room_players: { nickname } }]
+ *  - allPlayerIds: string[] – all player IDs in the room (for stable color assignment)
  *  - highlightPlayerId: optional – highlights a specific player (for PlayerScreen)
  *  - compact: optional – smaller version for inline use
  */
 export default function ScoreBoard({
   scores = [],
+  allPlayerIds = [],
   highlightPlayerId,
   compact = false,
 }) {
@@ -36,7 +38,13 @@ export default function ScoreBoard({
     'from-lime-500 to-lime-600',
   ];
 
-  const stableIds = [...scores].map((s) => s.player_id).sort();
+  // Stable color per player – based on the full room player list (join order),
+  // NOT the scores array which grows over time.
+  // allPlayerIds is sorted by join time; fallback to score player_ids if not provided.
+  const stableIds =
+    allPlayerIds.length > 0
+      ? allPlayerIds
+      : [...scores].map((s) => s.player_id).sort();
   const colorByPlayerId = {};
   stableIds.forEach((id, i) => {
     colorByPlayerId[id] = playerColors[i % playerColors.length];

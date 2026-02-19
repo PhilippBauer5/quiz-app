@@ -476,7 +476,12 @@ export default function HostScreen() {
             </div>
 
             {/* Live Scoreboard */}
-            {scores.length > 0 && <ScoreBoard scores={scores} />}
+            {scores.length > 0 && (
+              <ScoreBoard
+                scores={scores}
+                allPlayerIds={players.map((p) => p.id)}
+              />
+            )}
 
             <div className="flex gap-3 mt-4">
               {currentIdx > 0 && (

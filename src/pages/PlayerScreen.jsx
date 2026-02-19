@@ -5,6 +5,7 @@ import {
   loadQuestions,
   submitAnswer,
   loadScores,
+  loadPlayers,
 } from '../lib/supabase/api';
 import { getPlayerData } from '../lib/supabase/storage';
 import { supabase } from '../lib/supabaseClient';
@@ -39,6 +40,7 @@ export default function PlayerScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [scores, setScores] = useState([]);
+  const [allPlayerIds, setAllPlayerIds] = useState([]);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
@@ -54,6 +56,10 @@ export default function PlayerScreen() {
         setRoom(roomData);
         const qs = await loadQuestions(roomData.quiz_id);
         setQuestions(qs);
+
+        // Load all players for stable color assignment
+        const ps = await loadPlayers(roomData.id);
+        setAllPlayerIds(ps.map((p) => p.id));
 
         if (roomData.current_question_id) {
           const cq = qs.find((q) => q.id === roomData.current_question_id);
@@ -358,6 +364,7 @@ export default function PlayerScreen() {
               {scores.length > 0 && (
                 <ScoreBoard
                   scores={scores}
+                  allPlayerIds={allPlayerIds}
                   highlightPlayerId={playerData?.playerId}
                   compact
                 />
@@ -405,6 +412,7 @@ export default function PlayerScreen() {
               {scores.length > 0 && (
                 <ScoreBoard
                   scores={scores}
+                  allPlayerIds={allPlayerIds}
                   highlightPlayerId={playerData?.playerId}
                 />
               )}
