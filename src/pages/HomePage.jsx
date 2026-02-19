@@ -2,7 +2,11 @@ import { Link } from 'react-router-dom';
 import { PenLine, Users, Plus, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { PageTransition, ScaleOnHover, FadeIn } from '../components/ui/Animations';
+import {
+  PageTransition,
+  ScaleOnHover,
+  FadeIn,
+} from '../components/ui/Animations';
 
 const cards = [
   {
@@ -51,7 +55,9 @@ export default function HomePage() {
                     <div className={`rounded-lg ${card.bg} p-3 w-fit mb-4`}>
                       <card.icon className={`h-6 w-6 ${card.color}`} />
                     </div>
-                    <h2 className="text-base font-semibold mb-1">{card.title}</h2>
+                    <h2 className="text-base font-semibold mb-1">
+                      {card.title}
+                    </h2>
                     <p className="text-sm text-gray-400 mb-4 flex-1">
                       {card.description}
                     </p>

@@ -34,7 +34,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
+import { Button, buttonVariants } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { PageTransition, FadeIn } from '../components/ui/Animations';
 import { LoadingState, ErrorState } from '../components/ui/States';
