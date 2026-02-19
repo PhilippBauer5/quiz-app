@@ -156,12 +156,14 @@ export default function HostScreen() {
   async function startGame() {
     if (!room || questions.length === 0) return;
     try {
+      // For modes with custom host views (e.g. blind_top5): start with no question → intro splash
+      const firstQuestionId = usesCustomHostView ? null : questions[0].id;
       const updated = await updateRoom(room.id, {
         status: 'active',
-        current_question_id: questions[0].id,
+        current_question_id: firstQuestionId,
       });
       setRoom(updated);
-      setCurrentIdx(0);
+      if (firstQuestionId) setCurrentIdx(0);
     } catch (err) {
       setError(err.message);
     }

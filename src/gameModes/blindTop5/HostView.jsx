@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabaseClient';
 import { updateRoom, loadSubmissions } from '../../lib/supabase/api';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -13,6 +14,7 @@ import {
   Clock,
   List,
   AlertTriangle,
+  Play,
 } from 'lucide-react';
 
 /**
@@ -130,6 +132,77 @@ export default function BlindTop5HostView({
     }
   }
 
+  // ── Intro splash (before first question) ──
+  const isIntro = !room?.current_question_id;
+
+  async function handleGo() {
+    if (!questions.length) return;
+    try {
+      const updated = await updateRoom(room.id, {
+        current_question_id: questions[0].id,
+      });
+      if (onRoomUpdate) onRoomUpdate(updated);
+      setCurrentIdx(0);
+      setSubmissions([]);
+    } catch (err) {
+      console.error('handleGo error:', err);
+    }
+  }
+
+  if (isIntro) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="w-full"
+        >
+          <Card className="border-blue-700/50 bg-gradient-to-br from-blue-950/40 to-gray-900/60 mb-6">
+            <CardContent className="py-12 text-center">
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="text-sm uppercase tracking-widest text-blue-400 mb-3"
+              >
+                Blind Top 5
+              </motion.p>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.6 }}
+                className="text-4xl font-extrabold mb-2"
+              >
+                {room?.quizzes?.title || 'Blind Top 5'}
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.9, duration: 0.5 }}
+                className="text-gray-400 mt-2"
+              >
+                {players.length} Spieler bereit
+              </motion.p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2, duration: 0.5 }}
+          className="w-full"
+        >
+          <Button onClick={handleGo} className="w-full" size="lg">
+            <Play className="h-5 w-5 mr-2" />
+            Los!
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
+
   // ── Summary view ──
   if (showSummary) {
     return (
@@ -217,7 +290,11 @@ export default function BlindTop5HostView({
               const sub = submissions.find((s) => s.player_id === player.id);
               let chosenPos = null;
               if (sub) {
-                try { chosenPos = JSON.parse(sub.answer_text).chosen_position; } catch { /* ignore */ }
+                try {
+                  chosenPos = JSON.parse(sub.answer_text).chosen_position;
+                } catch {
+                  /* ignore */
+                }
               }
               return (
                 <div
@@ -231,7 +308,9 @@ export default function BlindTop5HostView({
                   <span className="text-sm">{player.nickname}</span>
                   {sub ? (
                     <span className="flex items-center gap-1.5">
-                      <Badge variant="default" className="text-xs">Platz {chosenPos}</Badge>
+                      <Badge variant="default" className="text-xs">
+                        Platz {chosenPos}
+                      </Badge>
                       <CheckCircle className="h-4 w-4 text-green-400" />
                     </span>
                   ) : (

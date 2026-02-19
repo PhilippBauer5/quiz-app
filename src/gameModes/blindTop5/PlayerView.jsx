@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabaseClient';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -166,14 +167,45 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
   }
 
   if (!question) {
+    // Intro splash — show quiz title while waiting for host to press "Los"
     return (
-      <FadeIn>
-        <Card>
-          <CardContent className="py-10 text-center">
-            <p className="text-gray-500">Warte auf das nächste Item…</p>
-          </CardContent>
-        </Card>
-      </FadeIn>
+      <div className="flex flex-col items-center justify-center min-h-[50vh]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="w-full"
+        >
+          <Card className="border-blue-700/50 bg-gradient-to-br from-blue-950/40 to-gray-900/60">
+            <CardContent className="py-12 text-center">
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="text-sm uppercase tracking-widest text-blue-400 mb-3"
+              >
+                Blind Top 5
+              </motion.p>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.6 }}
+                className="text-4xl font-extrabold"
+              >
+                {room?.quizzes?.title || 'Blind Top 5'}
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.9, duration: 0.5 }}
+                className="text-gray-400 mt-3"
+              >
+                Warte auf den Host…
+              </motion.p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     );
   }
 
