@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { loadQuizzes } from '../lib/supabase/api';
+import { loadQuizzes, deleteQuiz } from '../lib/supabase/api';
 import { GAME_MODES } from '../gameModes';
-import { Plus, ArrowLeft, FileText, ArrowRight } from 'lucide-react';
+import { Plus, ArrowLeft, FileText, ArrowRight, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -13,11 +13,13 @@ import {
   FadeIn,
   ScaleOnHover,
 } from '../components/ui/Animations';
+import { toast } from 'sonner';
 
 export default function QuizzesPage() {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   useEffect(() => {
     loadQuizzes()
@@ -25,6 +27,27 @@ export default function QuizzesPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleDelete(e, quiz) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (
+      !window.confirm(
+        `„${quiz.title}" wirklich löschen? Alle Fragen und zugehörigen Räume werden ebenfalls gelöscht.`
+      )
+    )
+      return;
+    setDeleting(quiz.id);
+    try {
+      await deleteQuiz(quiz.id);
+      setQuizzes((prev) => prev.filter((q) => q.id !== quiz.id));
+      toast.success('Quiz gelöscht');
+    } catch (err) {
+      toast.error('Fehler beim Löschen: ' + err.message);
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -97,10 +120,21 @@ export default function QuizzesPage() {
                         <h3 className="text-base font-semibold">
                           {quiz.title}
                         </h3>
-                        <Badge variant="secondary">
-                          {quiz.questionCount}{' '}
-                          {quiz.questionCount === 1 ? 'Frage' : 'Fragen'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary">
+                            {quiz.questionCount}{' '}
+                            {quiz.questionCount === 1 ? 'Frage' : 'Fragen'}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-gray-500 hover:text-red-400 hover:bg-red-400/10"
+                            loading={deleting === quiz.id}
+                            onClick={(e) => handleDelete(e, quiz)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="inline-flex items-center gap-1 text-sm text-blue-400 font-medium">

@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { deleteQuestionImage } from './imageStorage';
 
 // ── Room Code Generator ──
 export function generateRoomCode() {
@@ -52,6 +53,53 @@ export async function updateQuiz(id, updates) {
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function deleteQuiz(id) {
+  // 1. Load questions to clean up images from storage
+  const { data: questions } = await supabase
+    .from('quiz_questions')
+    .select('id, image_path')
+    .eq('quiz_id', id);
+
+  // 2. Delete images from storage
+  if (questions) {
+    await Promise.all(
+      questions
+        .filter((q) => q.image_path)
+        .map((q) => deleteQuestionImage(q.image_path))
+    );
+  }
+
+  // 3. Clear current_question_id in rooms referencing these questions
+  if (questions?.length) {
+    const qIds = questions.map((q) => q.id);
+    await supabase
+      .from('rooms')
+      .update({ current_question_id: null })
+      .in('current_question_id', qIds);
+  }
+
+  // 4. Delete related rows (submissions, scores, players via rooms)
+  const { data: rooms } = await supabase
+    .from('rooms')
+    .select('id')
+    .eq('quiz_id', id);
+
+  if (rooms?.length) {
+    const roomIds = rooms.map((r) => r.id);
+    await supabase.from('submissions').delete().in('room_id', roomIds);
+    await supabase.from('scores').delete().in('room_id', roomIds);
+    await supabase.from('players').delete().in('room_id', roomIds);
+    await supabase.from('rooms').delete().eq('quiz_id', id);
+  }
+
+  // 5. Delete questions
+  await supabase.from('quiz_questions').delete().eq('quiz_id', id);
+
+  // 6. Delete the quiz itself
+  const { error } = await supabase.from('quizzes').delete().eq('id', id);
+  if (error) throw error;
 }
 
 // ── Questions ──
