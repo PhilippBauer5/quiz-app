@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { loadQuizzes, createRoom } from '../lib/supabase/api';
+import { GAME_MODES } from '../gameModes';
 import { saveHostToken } from '../lib/supabase/storage';
 import { ArrowLeft, Plus, FileText, Play } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
@@ -120,6 +121,9 @@ export default function RoomCreatePage() {
                       {quiz.questionCount === 1 ? 'Frage' : 'Fragen'}
                     </Badge>
                   </div>
+                  <span className="text-xs text-gray-500 mt-1 block">
+                    {GAME_MODES[quiz.quiz_type]?.label || 'Klassisch'}
+                  </span>
                 </button>
               </FadeIn>
             ))}

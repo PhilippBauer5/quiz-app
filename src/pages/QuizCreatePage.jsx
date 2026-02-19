@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createQuiz, saveQuestions } from '../lib/supabase/api';
 import { GAME_MODES } from '../gameModes';
-import { ArrowLeft, Plus, Trash2, Save, Check, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Save,
+  Check,
+  X,
+  ChevronDown,
+} from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -100,22 +108,21 @@ export default function QuizCreatePage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Spielmodus</Label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {Object.entries(GAME_MODES).map(([key, mode]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setQuizType(key)}
-                  className={`rounded-lg border p-4 text-left transition-all ${
-                    quizType === key
-                      ? 'border-blue-500 bg-blue-950/40 ring-1 ring-blue-500/30'
-                      : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
-                  }`}
-                >
-                  <span className="font-medium text-sm">{mode.label}</span>
-                </button>
-              ))}
+            <Label htmlFor="quizType">Spielmodus</Label>
+            <div className="relative">
+              <select
+                id="quizType"
+                value={quizType}
+                onChange={(e) => setQuizType(e.target.value)}
+                className="w-full appearance-none rounded-lg border border-gray-700 bg-gray-900/80 px-4 py-2.5 pr-10 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors"
+              >
+                {Object.entries(GAME_MODES).map(([key, mode]) => (
+                  <option key={key} value={key}>
+                    {mode.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             </div>
           </div>
         </CardContent>

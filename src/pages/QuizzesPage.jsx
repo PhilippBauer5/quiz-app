@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { loadQuizzes } from '../lib/supabase/api';
+import { GAME_MODES } from '../gameModes';
 import { Plus, ArrowLeft, FileText, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -101,9 +102,14 @@ export default function QuizzesPage() {
                           {quiz.questionCount === 1 ? 'Frage' : 'Fragen'}
                         </Badge>
                       </div>
-                      <span className="inline-flex items-center gap-1 text-sm text-blue-400 font-medium">
-                        Bearbeiten <ArrowRight className="h-3.5 w-3.5" />
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1 text-sm text-blue-400 font-medium">
+                          Bearbeiten <ArrowRight className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {GAME_MODES[quiz.quiz_type]?.label || 'Klassisch'}
+                        </span>
+                      </div>
                     </CardContent>
                   </Card>
                 </Link>
