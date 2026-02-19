@@ -12,6 +12,7 @@ import {
   CheckCircle,
   Clock,
   List,
+  AlertTriangle,
 } from 'lucide-react';
 
 /**
@@ -22,10 +23,16 @@ import {
  * Nach dem letzten Item: Zusammenfassung aller Rankings (ohne Punkte).
  * "Spiel beenden" setzt status → finished.
  */
-export default function BlindTop5HostView({ room, questions, players }) {
+export default function BlindTop5HostView({
+  room,
+  questions,
+  players,
+  onRoomUpdate,
+}) {
   const [submissions, setSubmissions] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
+  const [showSkipWarning, setShowSkipWarning] = useState(false);
   const [allPlacements, setAllPlacements] = useState({}); // { playerId: { itemId: pos } }
 
   // Sync currentIdx from room state
@@ -36,6 +43,8 @@ export default function BlindTop5HostView({ room, questions, players }) {
   }, [room?.current_question_id, questions]);
 
   const currentQuestion = questions[currentIdx] || null;
+  const allAnswered =
+    players.length > 0 && submissions.length >= players.length;
 
   // Poll submissions for the current item
   const refreshSubmissions = useCallback(async () => {
@@ -79,7 +88,17 @@ export default function BlindTop5HostView({ room, questions, players }) {
   }, [room?.id, questions]);
 
   // ── Navigation ──
-  async function nextQuestion() {
+  function handleNextClick() {
+    if (!allAnswered && players.length > 0) {
+      setShowSkipWarning(true);
+      return;
+    }
+    confirmNext();
+  }
+
+  async function confirmNext() {
+    setShowSkipWarning(false);
+
     if (currentIdx >= questions.length - 1) {
       // Last item → show summary
       await loadAllPlacements();
@@ -89,9 +108,10 @@ export default function BlindTop5HostView({ room, questions, players }) {
 
     const nextIdx = currentIdx + 1;
     try {
-      await updateRoom(room.id, {
+      const updated = await updateRoom(room.id, {
         current_question_id: questions[nextIdx].id,
       });
+      if (onRoomUpdate) onRoomUpdate(updated);
       setCurrentIdx(nextIdx);
       setSubmissions([]);
     } catch (err) {
@@ -101,7 +121,8 @@ export default function BlindTop5HostView({ room, questions, players }) {
 
   async function finishGame() {
     try {
-      await updateRoom(room.id, { status: 'finished' });
+      const updated = await updateRoom(room.id, { status: 'finished' });
+      if (onRoomUpdate) onRoomUpdate(updated);
     } catch (err) {
       console.error('finishGame error:', err);
     }
@@ -218,7 +239,7 @@ export default function BlindTop5HostView({ room, questions, players }) {
         </CardContent>
       </Card>
 
-      <Button onClick={nextQuestion} className="w-full" size="lg">
+      <Button onClick={handleNextClick} className="w-full" size="lg">
         {currentIdx < questions.length - 1 ? (
           <>
             Nächstes Item <ChevronRight className="h-4 w-4 ml-1" />
@@ -230,6 +251,36 @@ export default function BlindTop5HostView({ room, questions, players }) {
           </>
         )}
       </Button>
+
+      {/* Skip Warning Modal */}
+      {showSkipWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <Card className="max-w-sm mx-4 border-gray-700">
+            <CardContent className="pt-6 text-center">
+              <AlertTriangle className="h-10 w-10 text-yellow-400 mx-auto mb-3" />
+              <p className="text-lg font-semibold mb-2">
+                Nicht alle haben eingeordnet
+              </p>
+              <p className="text-gray-400 mb-5">
+                {submissions.length} von {players.length} Spielern haben dieses
+                Item eingeordnet. Trotzdem weiter?
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowSkipWarning(false)}
+                >
+                  Abbrechen
+                </Button>
+                <Button className="flex-1" onClick={confirmNext}>
+                  Trotzdem weiter
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </FadeIn>
   );
 }

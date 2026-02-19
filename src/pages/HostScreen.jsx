@@ -340,7 +340,12 @@ export default function HostScreen() {
 
       {/* Active Game */}
       {room?.status === 'active' && quizType !== 'qa' && ModeHostView ? (
-        <ModeHostView room={room} questions={questions} players={players} />
+        <ModeHostView
+          room={room}
+          questions={questions}
+          players={players}
+          onRoomUpdate={setRoom}
+        />
       ) : (
         room?.status === 'active' &&
         currentQuestion && (
