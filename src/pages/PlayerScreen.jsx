@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   loadRoomByCode,
@@ -40,6 +40,7 @@ export default function PlayerScreen() {
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const lastCheckedKey = useRef(null);
 
   const playerData = getPlayerData(code);
 
@@ -80,6 +81,7 @@ export default function PlayerScreen() {
         setResult(null);
         setAlreadySubmitted(false);
         setIsChecking(false);
+        lastCheckedKey.current = null;
       }
 
       // Check own submission result
@@ -106,16 +108,25 @@ export default function PlayerScreen() {
 
   // Check for existing submission when question changes
   useEffect(() => {
-    if (!currentQuestion || !playerData || !room) return;
+    const playerId = playerData?.playerId;
+    const questionId = currentQuestion?.id;
+    if (!playerId || !questionId) return;
+
+    const checkKey = `${playerId}:${questionId}`;
+    if (lastCheckedKey.current === checkKey) return;
+    lastCheckedKey.current = checkKey;
+
+    let cancelled = false;
     setIsChecking(true);
     (async () => {
       try {
         const { data } = await supabase
           .from('submissions')
           .select('answer_text, is_correct')
-          .eq('player_id', playerData.playerId)
-          .eq('question_id', currentQuestion.id)
+          .eq('player_id', playerId)
+          .eq('question_id', questionId)
           .maybeSingle();
+        if (cancelled) return;
         if (data) {
           setAnswer(data.answer_text || '');
           setSubmitted(true);
@@ -125,10 +136,13 @@ export default function PlayerScreen() {
       } catch (err) {
         console.error('checkExisting error:', err);
       } finally {
-        setIsChecking(false);
+        if (!cancelled) setIsChecking(false);
       }
     })();
-  }, [currentQuestion?.id, playerData, room]);
+    return () => {
+      cancelled = true;
+    };
+  }, [currentQuestion?.id, playerData?.playerId]);
 
   // Load scores when game finishes
   useEffect(() => {
