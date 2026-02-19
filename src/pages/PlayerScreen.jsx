@@ -26,6 +26,7 @@ import { Button, buttonVariants } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { PageTransition, FadeIn } from '../components/ui/Animations';
 import { LoadingState, ErrorState } from '../components/ui/States';
+import ScoreBoard from '../components/ScoreBoard';
 
 export default function PlayerScreen() {
   const { code } = useParams();
@@ -145,17 +146,31 @@ export default function PlayerScreen() {
     };
   }, [currentQuestion?.id, playerData?.playerId]);
 
-  // Load scores when game finishes
+  // Load scores during active game + when finished
   useEffect(() => {
-    if (!room || room.status !== 'finished') return;
-    (async () => {
+    if (!room) return;
+    const shouldPoll =
+      room.status === 'active' &&
+      !(
+        room?.quizzes?.quiz_type !== 'qa' &&
+        GAME_MODES[room?.quizzes?.quiz_type]?.playerView
+      );
+    const shouldLoad = room.status === 'finished' || shouldPoll;
+    if (!shouldLoad) return;
+
+    const fetchScores = async () => {
       try {
         const sc = await loadScores(room.id);
         setScores(sc);
       } catch (err) {
         console.error('loadScores error:', err);
       }
-    })();
+    };
+    fetchScores();
+    if (shouldPoll) {
+      const interval = setInterval(fetchScores, 4000);
+      return () => clearInterval(interval);
+    }
   }, [room]);
 
   async function handleSubmit(e) {
@@ -340,6 +355,13 @@ export default function PlayerScreen() {
                   <p className="text-gray-500">Warte auf Bewertung…</p>
                 </CardContent>
               </Card>
+              {scores.length > 0 && (
+                <ScoreBoard
+                  scores={scores}
+                  highlightPlayerId={playerData?.playerId}
+                  compact
+                />
+              )}
             </FadeIn>
           )}
 
@@ -365,6 +387,12 @@ export default function PlayerScreen() {
                   <p className="text-gray-400">Warte auf die nächste Frage…</p>
                 </CardContent>
               </Card>
+              {scores.length > 0 && (
+                <ScoreBoard
+                  scores={scores}
+                  highlightPlayerId={playerData?.playerId}
+                />
+              )}
             </FadeIn>
           )}
 

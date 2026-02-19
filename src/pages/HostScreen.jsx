@@ -39,6 +39,7 @@ import { Button, buttonVariants } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { PageTransition, FadeIn } from '../components/ui/Animations';
 import { LoadingState, ErrorState } from '../components/ui/States';
+import ScoreBoard from '../components/ScoreBoard';
 
 export default function HostScreen() {
   const { code } = useParams();
@@ -126,18 +127,25 @@ export default function HostScreen() {
     return () => clearInterval(interval);
   }, [refreshSubmissions]);
 
-  // Load scores when game finishes
+  // Load scores during active game + when finished
+  const refreshScores = useCallback(async () => {
+    if (!room) return;
+    try {
+      const sc = await loadScores(room.id);
+      setScores(sc);
+    } catch (err) {
+      console.error('loadScores error:', err);
+    }
+  }, [room]);
+
   useEffect(() => {
-    if (!room || !isFinished) return;
-    (async () => {
-      try {
-        const sc = await loadScores(room.id);
-        setScores(sc);
-      } catch (err) {
-        console.error('loadScores error:', err);
-      }
-    })();
-  }, [room, isFinished]);
+    if (!room || isWaiting) return;
+    refreshScores();
+    if (room.status === 'active' && !usesCustomHostView) {
+      const interval = setInterval(refreshScores, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [room, isWaiting, usesCustomHostView, refreshScores]);
 
   // Refresh players periodically when waiting
   useEffect(() => {
@@ -467,7 +475,10 @@ export default function HostScreen() {
               )}
             </div>
 
-            <div className="flex gap-3">
+            {/* Live Scoreboard */}
+            {scores.length > 0 && <ScoreBoard scores={scores} />}
+
+            <div className="flex gap-3 mt-4">
               {currentIdx > 0 && (
                 <Button variant="outline" onClick={prevQuestion}>
                   <ChevronLeft className="h-4 w-4 mr-1" /> Vorherige Frage
