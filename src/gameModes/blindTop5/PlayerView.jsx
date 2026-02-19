@@ -23,8 +23,8 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dragOver, setDragOver] = useState(null);
-  const [splashDone, setSplashDone] = useState(false);
-  const splashStartedAt = useRef(null);
+  const [splashActive, setSplashActive] = useState(false);
+  const splashHandled = useRef(false);
 
   // Load all items for this quiz
   useEffect(() => {
@@ -89,20 +89,22 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
     setDragOver(null);
   }, [question?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Intro splash: dismiss after 3s ──
+  // ── Intro splash: show once when first item arrives, auto-dismiss after 3s ──
   useEffect(() => {
-    if (!splashStartedAt.current || splashDone) return;
-    const timer = setTimeout(() => setSplashDone(true), 3000);
+    if (splashHandled.current || !question) return;
+    // Mid-game refresh → skip splash
+    if (Object.keys(placements).length > 0) {
+      splashHandled.current = true;
+      return;
+    }
+    // First item just arrived → show splash
+    splashHandled.current = true;
+    setSplashActive(true);
+    const timer = setTimeout(() => setSplashActive(false), 3000);
     return () => clearTimeout(timer);
-  }, [splashDone]);
+  }, [question, placements]);
 
-  // Synchronous splash decision (no flash — computed during render, not after)
-  const isFirstItem =
-    question && !splashDone && Object.keys(placements).length === 0;
-  if (isFirstItem && !splashStartedAt.current) {
-    splashStartedAt.current = Date.now();
-  }
-  const showIntroSplash = isFirstItem && splashStartedAt.current;
+  const showIntroSplash = splashActive;
 
   // Derived state
   const usedPositions = Object.values(placements);
