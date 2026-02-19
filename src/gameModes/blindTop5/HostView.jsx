@@ -136,7 +136,7 @@ export default function BlindTop5HostView({
       <FadeIn>
         <Card className="mb-4">
           <CardContent className="pt-5 pb-4">
-            <h2 className="text-lg font-bold mb-1">
+            <h2 className="text-2xl font-bold mb-1">
               {room?.quizzes?.title || 'Blind Top 5'}
             </h2>
             <p className="text-sm text-gray-500 mb-4">
@@ -191,7 +191,7 @@ export default function BlindTop5HostView({
       <Card className="mb-4">
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold">
+            <h2 className="text-2xl font-bold">
               {room?.quizzes?.title || 'Blind Top 5'}
             </h2>
             <Badge variant="secondary">
@@ -214,19 +214,26 @@ export default function BlindTop5HostView({
               </span>
             </div>
             {players.map((player) => {
-              const hasSub = submissions.some((s) => s.player_id === player.id);
+              const sub = submissions.find((s) => s.player_id === player.id);
+              let chosenPos = null;
+              if (sub) {
+                try { chosenPos = JSON.parse(sub.answer_text).chosen_position; } catch { /* ignore */ }
+              }
               return (
                 <div
                   key={player.id}
                   className={`flex items-center justify-between rounded-lg px-3 py-2 border ${
-                    hasSub
+                    sub
                       ? 'border-green-700/50 bg-green-950/20'
                       : 'border-gray-700/50 bg-gray-900/50'
                   }`}
                 >
                   <span className="text-sm">{player.nickname}</span>
-                  {hasSub ? (
-                    <CheckCircle className="h-4 w-4 text-green-400" />
+                  {sub ? (
+                    <span className="flex items-center gap-1.5">
+                      <Badge variant="default" className="text-xs">Platz {chosenPos}</Badge>
+                      <CheckCircle className="h-4 w-4 text-green-400" />
+                    </span>
                   ) : (
                     <Clock className="h-4 w-4 text-gray-500" />
                   )}
