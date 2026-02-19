@@ -87,9 +87,9 @@ export default function HostScreen() {
     })();
   }, [code]);
 
-  // Load submissions for current question
+  // Load submissions for current question (skip when ModeHostView is active – it polls itself)
   const refreshSubmissions = useCallback(async () => {
-    if (!room || !currentQuestion) return;
+    if (!room || !currentQuestion || ModeHostView) return;
     try {
       let subs = await loadSubmissions(room.id, currentQuestion.id);
 

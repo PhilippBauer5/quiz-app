@@ -103,7 +103,7 @@ export default function PlayerScreen() {
   }, [room, code, questions, submitted, playerData]);
 
   useEffect(() => {
-    const interval = setInterval(refreshRoom, 2000);
+    const interval = setInterval(refreshRoom, 4000);
     return () => clearInterval(interval);
   }, [refreshRoom]);
 

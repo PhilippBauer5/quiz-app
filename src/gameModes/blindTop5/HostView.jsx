@@ -59,9 +59,11 @@ export default function BlindTop5HostView({
 
   useEffect(() => {
     refreshSubmissions();
-    const interval = setInterval(refreshSubmissions, 3000);
+    // Stop polling once all players have answered this item
+    if (allAnswered) return;
+    const interval = setInterval(refreshSubmissions, 5000);
     return () => clearInterval(interval);
-  }, [refreshSubmissions]);
+  }, [refreshSubmissions, allAnswered]);
 
   // Load all placements for summary view
   const loadAllPlacements = useCallback(async () => {
