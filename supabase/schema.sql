@@ -31,6 +31,7 @@ CREATE TABLE quiz_questions (
   quiz_id    UUID NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
   question   TEXT NOT NULL,
   answer     TEXT,                -- optionale Musterantwort für den Host
+  image_path TEXT,                -- Pfad im Supabase Storage (quiz-images Bucket)
   position   INT NOT NULL,        -- Reihenfolge der Fragen
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 

@@ -7,6 +7,7 @@
  * 3. QuizEditPage.jsx   → Antwort-Input für den Modus anpassen
  *
  * hostView: null → nutzt die Standard-QA Host-Ansicht
+ * playerView: null → nutzt die Standard-QA Player-Ansicht
  */
 
 import QAHostView from './qa/HostView';
@@ -24,5 +25,10 @@ export const GAME_MODES = {
     label: 'Wahr und Lüge',
     hostView: null,
     playerView: TrueFalsePlayerView,
+  },
+  identify_image: {
+    label: 'Wer oder was ist das?',
+    hostView: null,
+    playerView: null,
   },
 };

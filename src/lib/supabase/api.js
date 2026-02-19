@@ -86,6 +86,7 @@ export async function saveQuestions(quizId, questions) {
     quiz_id: quizId,
     question: q.question,
     answer: q.answer || null,
+    image_path: q.image_path || null,
     position: i,
   }));
 
