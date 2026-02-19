@@ -173,7 +173,7 @@ export async function updateRoom(roomId, updates) {
     .from('rooms')
     .update(updates)
     .eq('id', roomId)
-    .select()
+    .select('*, quizzes(title, quiz_type)')
     .single();
   if (error) throw error;
   return data;
