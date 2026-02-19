@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabaseClient';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -23,7 +23,8 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dragOver, setDragOver] = useState(null);
-  const [introDismissed, setIntroDismissed] = useState(false);
+  const [showIntroSplash, setShowIntroSplash] = useState(false);
+  const hasShownSplash = useRef(false);
 
   // Load all items for this quiz
   useEffect(() => {
@@ -88,22 +89,20 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
     setDragOver(null);
   }, [question?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Intro management ──
-  // Skip intro instantly on mid-game refresh (existing placements found)
+  // ── Intro splash: show once when first item arrives in a fresh game ──
   useEffect(() => {
-    if (!loading && Object.keys(placements).length > 0) {
-      setIntroDismissed(true);
+    if (!question || hasShownSplash.current) return;
+    // Mid-game refresh → skip splash
+    if (Object.keys(placements).length > 0) {
+      hasShownSplash.current = true;
+      return;
     }
-  }, [loading, placements]);
-
-  // Auto-dismiss intro once the first item arrives and data is ready
-  useEffect(() => {
-    if (introDismissed) return;
-    if (question && !loading) {
-      const timer = setTimeout(() => setIntroDismissed(true), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [question, loading, introDismissed]);
+    // First item just arrived → show splash for 3s, then reveal item
+    hasShownSplash.current = true;
+    setShowIntroSplash(true);
+    const timer = setTimeout(() => setShowIntroSplash(false), 3000);
+    return () => clearTimeout(timer);
+  }, [question]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derived state
   const usedPositions = Object.values(placements);
@@ -174,10 +173,8 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
   }
 
   // ── States ──
-  // Intro splash: covers loading + waiting-for-first-item phases
-  // Dismisses automatically once first item arrives (after 1.5s delay)
-  // or instantly on mid-game refresh when placements are found
-  if (!introDismissed) {
+  // Intro splash: shown for 3s when the first item arrives
+  if (showIntroSplash) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
         <motion.div
@@ -210,12 +207,22 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
                 transition={{ delay: 0.9, duration: 0.5 }}
                 className="text-gray-400 mt-3"
               >
-                Warte auf den Host…
+                Los geht's!
               </motion.p>
             </CardContent>
           </Card>
         </motion.div>
       </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center">
+          <p className="text-gray-400">Lade Spielstand…</p>
+        </CardContent>
+      </Card>
     );
   }
 
