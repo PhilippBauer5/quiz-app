@@ -14,6 +14,8 @@ import QAHostView from './qa/HostView';
 import QAPlayerView from './qa/PlayerView';
 import TrueFalseHostView from './trueFalse/HostView';
 import TrueFalsePlayerView from './trueFalse/PlayerView';
+import IdentifyImageHostView from './identifyImage/HostView';
+import IdentifyImagePlayerView from './identifyImage/PlayerView';
 
 export const GAME_MODES = {
   qa: {
