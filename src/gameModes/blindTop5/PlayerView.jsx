@@ -23,6 +23,7 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dragOver, setDragOver] = useState(null);
+  const [introDismissed, setIntroDismissed] = useState(false);
 
   // Load all items for this quiz
   useEffect(() => {
@@ -86,6 +87,23 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
     setSelectedSlot(null);
     setDragOver(null);
   }, [question?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Intro management ──
+  // Skip intro instantly on mid-game refresh (existing placements found)
+  useEffect(() => {
+    if (!loading && Object.keys(placements).length > 0) {
+      setIntroDismissed(true);
+    }
+  }, [loading, placements]);
+
+  // Auto-dismiss intro once the first item arrives and data is ready
+  useEffect(() => {
+    if (introDismissed) return;
+    if (question && !loading) {
+      const timer = setTimeout(() => setIntroDismissed(true), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [question, loading, introDismissed]);
 
   // Derived state
   const usedPositions = Object.values(placements);
@@ -156,18 +174,10 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
   }
 
   // ── States ──
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="py-10 text-center">
-          <p className="text-gray-400">Lade Spielstand…</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!question) {
-    // Intro splash — show quiz title while waiting for host to press "Los"
+  // Intro splash: covers loading + waiting-for-first-item phases
+  // Dismisses automatically once first item arrives (after 1.5s delay)
+  // or instantly on mid-game refresh when placements are found
+  if (!introDismissed) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
         <motion.div
@@ -206,6 +216,18 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
           </Card>
         </motion.div>
       </div>
+    );
+  }
+
+  if (!question) {
+    return (
+      <FadeIn>
+        <Card>
+          <CardContent className="py-10 text-center">
+            <p className="text-gray-500">Warte auf das nächste Item…</p>
+          </CardContent>
+        </Card>
+      </FadeIn>
     );
   }
 
