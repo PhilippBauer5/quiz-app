@@ -9,12 +9,40 @@ import { FadeIn } from '../../components/ui/Animations';
 export default function TrueFalsePlayerView({ room, question, playerData }) {
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
   // Reset when question changes
   useEffect(() => {
     setSubmitted(false);
     setResult(null);
+    setIsSubmitting(false);
+    setIsChecking(false);
   }, [question?.id]);
+
+  // Check for existing submission on question load
+  useEffect(() => {
+    if (!question || !playerData) return;
+    setIsChecking(true);
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('submissions')
+          .select('answer_text, is_correct')
+          .eq('player_id', playerData.playerId)
+          .eq('question_id', question.id)
+          .maybeSingle();
+        if (data) {
+          setSubmitted(true);
+          if (data.is_correct !== null) setResult(data.is_correct);
+        }
+      } catch (err) {
+        console.error('checkExisting error:', err);
+      } finally {
+        setIsChecking(false);
+      }
+    })();
+  }, [question?.id, playerData]);
 
   // Poll for evaluation result
   const checkResult = useCallback(async () => {
@@ -42,7 +70,8 @@ export default function TrueFalsePlayerView({ room, question, playerData }) {
   }, [checkResult, submitted]);
 
   async function handleAnswer(answerText) {
-    if (!room || !question || !playerData || submitted) return;
+    if (!room || !question || !playerData || submitted || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await submitAnswer({
         roomId: room.id,
@@ -52,7 +81,20 @@ export default function TrueFalsePlayerView({ room, question, playerData }) {
       });
       setSubmitted(true);
     } catch (err) {
-      console.error('submitAnswer error:', err);
+      if (err.code === '23505') {
+        setSubmitted(true);
+        const { data } = await supabase
+          .from('submissions')
+          .select('is_correct')
+          .eq('player_id', playerData.playerId)
+          .eq('question_id', question.id)
+          .maybeSingle();
+        if (data && data.is_correct !== null) setResult(data.is_correct);
+      } else {
+        console.error('submitAnswer error:', err);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -124,6 +166,7 @@ export default function TrueFalsePlayerView({ room, question, playerData }) {
         <Button
           variant="outline"
           onClick={() => handleAnswer('Wahr')}
+          disabled={isSubmitting || isChecking}
           className="h-auto rounded-xl border-2 border-green-700 bg-green-950/30 px-6 py-6 text-xl font-bold text-green-400 hover:bg-green-900/50"
         >
           <Check className="h-6 w-6 mr-2" /> Wahr
@@ -131,6 +174,7 @@ export default function TrueFalsePlayerView({ room, question, playerData }) {
         <Button
           variant="outline"
           onClick={() => handleAnswer('Falsch')}
+          disabled={isSubmitting || isChecking}
           className="h-auto rounded-xl border-2 border-red-700 bg-red-950/30 px-6 py-6 text-xl font-bold text-red-400 hover:bg-red-900/50"
         >
           <X className="h-6 w-6 mr-2" /> Falsch

@@ -18,6 +18,7 @@ import {
   Award,
   Home,
   User,
+  Info,
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button, buttonVariants } from '../components/ui/Button';
@@ -36,6 +37,9 @@ export default function PlayerScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [scores, setScores] = useState([]);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
   const playerData = getPlayerData(code);
 
@@ -74,6 +78,8 @@ export default function PlayerScreen() {
         setAnswer('');
         setSubmitted(false);
         setResult(null);
+        setAlreadySubmitted(false);
+        setIsChecking(false);
       }
 
       // Check own submission result
@@ -98,6 +104,32 @@ export default function PlayerScreen() {
     return () => clearInterval(interval);
   }, [refreshRoom]);
 
+  // Check for existing submission when question changes
+  useEffect(() => {
+    if (!currentQuestion || !playerData || !room) return;
+    setIsChecking(true);
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('submissions')
+          .select('answer_text, is_correct')
+          .eq('player_id', playerData.playerId)
+          .eq('question_id', currentQuestion.id)
+          .maybeSingle();
+        if (data) {
+          setAnswer(data.answer_text || '');
+          setSubmitted(true);
+          setAlreadySubmitted(true);
+          if (data.is_correct !== null) setResult(data.is_correct);
+        }
+      } catch (err) {
+        console.error('checkExisting error:', err);
+      } finally {
+        setIsChecking(false);
+      }
+    })();
+  }, [currentQuestion?.id, playerData, room]);
+
   // Load scores when game finishes
   useEffect(() => {
     if (!room || room.status !== 'finished') return;
@@ -114,7 +146,9 @@ export default function PlayerScreen() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!answer.trim() || !room || !currentQuestion || !playerData) return;
+    if (isSubmitting || alreadySubmitted) return;
 
+    setIsSubmitting(true);
     try {
       await submitAnswer({
         roomId: room.id,
@@ -124,7 +158,24 @@ export default function PlayerScreen() {
       });
       setSubmitted(true);
     } catch (err) {
-      setError(err.message);
+      if (err.code === '23505') {
+        setSubmitted(true);
+        setAlreadySubmitted(true);
+        const { data } = await supabase
+          .from('submissions')
+          .select('answer_text, is_correct')
+          .eq('player_id', playerData.playerId)
+          .eq('question_id', currentQuestion.id)
+          .maybeSingle();
+        if (data) {
+          setAnswer(data.answer_text || '');
+          if (data.is_correct !== null) setResult(data.is_correct);
+        }
+      } else {
+        setError(err.message);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -209,23 +260,39 @@ export default function PlayerScreen() {
                 </CardContent>
               </Card>
 
-              <form onSubmit={handleSubmit}>
-                <textarea
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  placeholder="Deine Antwort…"
-                  rows={3}
-                  className="w-full rounded-xl border border-gray-700 bg-gray-900/80 px-4 py-3 text-white placeholder-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none mb-4 resize-none"
-                />
-                <Button
-                  type="submit"
-                  size="lg"
-                  disabled={!answer.trim()}
-                  className="w-full"
-                >
-                  <Send className="h-5 w-5 mr-2" /> Antwort senden
-                </Button>
-              </form>
+              {isChecking ? (
+                <LoadingState text="Wird geprüft…" />
+              ) : (
+                <form onSubmit={handleSubmit}>
+                  <textarea
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    placeholder="Deine Antwort…"
+                    rows={3}
+                    disabled={alreadySubmitted}
+                    className="w-full rounded-xl border border-gray-700 bg-gray-900/80 px-4 py-3 text-white placeholder-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none mb-4 resize-none disabled:opacity-60"
+                  />
+                  {alreadySubmitted && (
+                    <p className="flex items-center gap-1.5 text-sm text-gray-400 mb-3">
+                      <Info className="h-4 w-4" /> Antwort bereits abgegeben
+                    </p>
+                  )}
+                  <Button
+                    type="submit"
+                    size="lg"
+                    disabled={
+                      !answer.trim() ||
+                      isSubmitting ||
+                      alreadySubmitted ||
+                      isChecking
+                    }
+                    loading={isSubmitting}
+                    className="w-full"
+                  >
+                    <Send className="h-5 w-5 mr-2" /> Antwort senden
+                  </Button>
+                </form>
+              )}
             </FadeIn>
           )}
 
