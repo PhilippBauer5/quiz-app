@@ -7,6 +7,11 @@ import {
   updateQuiz,
 } from '../lib/supabase/api';
 import {
+  uploadQuestionImage,
+  getImageUrl,
+  deleteQuestionImage,
+} from '../lib/supabase/imageStorage';
+import {
   ArrowLeft,
   Plus,
   Trash2,
@@ -14,6 +19,8 @@ import {
   Check,
   X,
   ArrowRight,
+  ImagePlus,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -30,7 +37,12 @@ function questionWithKey(q) {
 }
 
 function emptyQuestion() {
-  return { question: '', answer: '', key: crypto.randomUUID() };
+  return {
+    question: '',
+    answer: '',
+    key: crypto.randomUUID(),
+    image_path: null,
+  };
 }
 
 export default function QuizEditPage() {
@@ -41,6 +53,7 @@ export default function QuizEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [uploadingKeys, setUploadingKeys] = useState(new Set());
 
   useEffect(() => {
     Promise.all([loadQuiz(id), loadQuestions(id)])
@@ -71,6 +84,32 @@ export default function QuizEditPage() {
     );
   }
 
+  async function handleImageUpload(key, file) {
+    setUploadingKeys((prev) => new Set(prev).add(key));
+    try {
+      const path = await uploadQuestionImage(file, id, key);
+      updateQuestion(key, 'image_path', path);
+      toast.success('Bild hochgeladen');
+    } catch (err) {
+      toast.error(err.message || 'Upload fehlgeschlagen');
+    } finally {
+      setUploadingKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  }
+
+  async function handleImageRemove(key, imagePath) {
+    try {
+      await deleteQuestionImage(imagePath);
+    } catch {
+      // ignore – file may already be gone
+    }
+    updateQuestion(key, 'image_path', null);
+  }
+
   async function handleSave() {
     if (!title.trim()) {
       toast.error('Titel ist erforderlich.');
@@ -82,7 +121,14 @@ export default function QuizEditPage() {
 
     try {
       await updateQuiz(id, { title: title.trim() });
-      const validQuestions = questions.filter((q) => q.question.trim());
+
+      let validQuestions;
+      if (quiz?.quiz_type === 'identify_image') {
+        validQuestions = questions.filter((q) => q.image_path);
+      } else {
+        validQuestions = questions.filter((q) => q.question.trim());
+      }
+
       const savedQuestions = await saveQuestions(id, validQuestions);
       setQuestions(savedQuestions.map(questionWithKey));
       toast.success('Gespeichert!');
@@ -182,9 +228,64 @@ export default function QuizEditPage() {
                     onChange={(e) =>
                       updateQuestion(q.key, 'question', e.target.value)
                     }
-                    placeholder="Frage eingeben…"
+                    placeholder={
+                      quiz?.quiz_type === 'identify_image'
+                        ? 'Frage (optional)'
+                        : 'Frage eingeben…'
+                    }
                     className="mb-2"
                   />
+
+                  {/* Image upload for identify_image */}
+                  {quiz?.quiz_type === 'identify_image' && (
+                    <div className="mb-2">
+                      {q.image_path ? (
+                        <div className="relative group">
+                          <img
+                            src={getImageUrl(q.image_path)}
+                            alt="Fragebild"
+                            className="rounded-lg max-h-48 w-full object-contain bg-gray-900 border border-gray-700"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() =>
+                              handleImageRemove(q.key, q.image_path)
+                            }
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                            Entfernen
+                          </Button>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-700 px-4 py-6 text-sm text-gray-500 hover:border-blue-500 hover:text-blue-400 transition-all cursor-pointer">
+                          {uploadingKeys.has(q.key) ? (
+                            <>
+                              <Loader2 className="h-6 w-6 animate-spin" />
+                              <span>Wird hochgeladen…</span>
+                            </>
+                          ) : (
+                            <>
+                              <ImagePlus className="h-6 w-6" />
+                              <span>Bild hochladen (max. 3 MB)</span>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={uploadingKeys.has(q.key)}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageUpload(q.key, file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  )}
 
                   {quiz?.quiz_type === 'true_false' ? (
                     <div className="flex gap-2">

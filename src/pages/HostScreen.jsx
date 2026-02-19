@@ -11,6 +11,7 @@ import {
   loadScores,
 } from '../lib/supabase/api';
 import { getHostToken } from '../lib/supabase/storage';
+import { getImageUrl } from '../lib/supabase/imageStorage';
 import { GAME_MODES } from '../gameModes';
 import {
   Copy,
@@ -349,9 +350,18 @@ export default function HostScreen() {
                     Frage {currentIdx + 1} / {questions.length}
                   </Badge>
                 </div>
-                <h2 className="text-xl font-semibold mt-2 mb-2">
-                  {currentQuestion.question}
-                </h2>
+                {currentQuestion.image_path && (
+                  <img
+                    src={getImageUrl(currentQuestion.image_path)}
+                    alt="Fragebild"
+                    className="rounded-xl max-h-64 w-full object-contain bg-gray-900 border border-gray-700 mt-2 mb-3"
+                  />
+                )}
+                {currentQuestion.question && (
+                  <h2 className="text-xl font-semibold mt-2 mb-2">
+                    {currentQuestion.question}
+                  </h2>
+                )}
                 {currentQuestion.answer && (
                   <p className="text-sm text-gray-500">
                     Musterantwort:{' '}
