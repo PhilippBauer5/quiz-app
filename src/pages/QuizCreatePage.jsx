@@ -34,6 +34,19 @@ export default function QuizCreatePage() {
 
   const mode = GAME_MODES[quizType];
   const ModeEditor = mode?.questionEditor;
+  const fixedCount = mode?.fixedQuestionCount || 0;
+
+  // When quiz type changes, reset questions to match fixedQuestionCount
+  function handleQuizTypeChange(newType) {
+    setQuizType(newType);
+    const newMode = GAME_MODES[newType];
+    const count = newMode?.fixedQuestionCount;
+    if (count) {
+      setQuestions(Array.from({ length: count }, () => emptyQuestion()));
+    } else {
+      setQuestions([emptyQuestion()]);
+    }
+  }
 
   function addQuestion() {
     setQuestions((prev) => [...prev, emptyQuestion()]);
@@ -119,7 +132,7 @@ export default function QuizCreatePage() {
               <select
                 id="quizType"
                 value={quizType}
-                onChange={(e) => setQuizType(e.target.value)}
+                onChange={(e) => handleQuizTypeChange(e.target.value)}
                 className="w-full appearance-none rounded-lg border border-gray-700 bg-gray-900/80 px-4 py-2.5 pr-10 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-colors"
               >
                 {Object.entries(GAME_MODES).map(([key, mode]) => (
@@ -136,7 +149,9 @@ export default function QuizCreatePage() {
 
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Fragen</h2>
+          <h2 className="text-lg font-semibold">
+            {fixedCount ? 'Items' : 'Fragen'}
+          </h2>
           <Badge variant="secondary">{questions.length}</Badge>
         </div>
 
@@ -147,9 +162,9 @@ export default function QuizCreatePage() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium text-gray-500">
-                      Frage {idx + 1}
+                      {fixedCount ? `Platz ${idx + 1}` : `Frage ${idx + 1}`}
                     </span>
-                    {questions.length > 1 && (
+                    {!fixedCount && questions.length > 1 && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -167,6 +182,7 @@ export default function QuizCreatePage() {
                       question={q}
                       onUpdate={updateQuestion}
                       quizId={tempQuizId}
+                      index={idx}
                     />
                   )}
                 </CardContent>
@@ -175,13 +191,15 @@ export default function QuizCreatePage() {
           ))}
         </div>
 
-        <button
-          onClick={addQuestion}
-          className="mt-3 w-full rounded-lg border-2 border-dashed border-gray-700 px-4 py-3 text-sm text-gray-500 hover:border-blue-500 hover:text-blue-400 transition-all flex items-center justify-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Frage hinzufügen
-        </button>
+        {!fixedCount && (
+          <button
+            onClick={addQuestion}
+            className="mt-3 w-full rounded-lg border-2 border-dashed border-gray-700 px-4 py-3 text-sm text-gray-500 hover:border-blue-500 hover:text-blue-400 transition-all flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Frage hinzufügen
+          </button>
+        )}
       </div>
 
       <div className="flex gap-3">

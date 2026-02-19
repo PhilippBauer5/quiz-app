@@ -1,0 +1,15 @@
+-- Blind Top 5 migration
+-- This game mode reuses existing tables:
+--   quizzes.quiz_type = 'blind_top5'
+--   quiz_questions: stores the 5 items (question = item text, position = 0..4)
+--   submissions: stores placements (answer_text = JSON {"item_index": N, "chosen_position": N})
+--
+-- No new tables needed — the existing schema supports this mode.
+--
+-- The unique constraint on submissions (room_id, player_id, question_id) already
+-- prevents double-submit per item. Each quiz_question row = one item, so one
+-- submission per player per item is enforced.
+--
+-- If your submissions table does NOT yet have a unique constraint, run:
+-- ALTER TABLE submissions ADD CONSTRAINT submissions_room_player_question_unique
+--   UNIQUE (room_id, player_id, question_id);

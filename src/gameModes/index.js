@@ -36,6 +36,14 @@ import {
   getValidationError as iiError,
 } from './identifyImage/validate';
 
+import BlindTop5HostView from './blindTop5/HostView';
+import BlindTop5PlayerView from './blindTop5/PlayerView';
+import BlindTop5QuestionEditor from './blindTop5/QuestionEditor';
+import {
+  validateQuestions as bt5Validate,
+  getValidationError as bt5Error,
+} from './blindTop5/validate';
+
 export const GAME_MODES = {
   qa: {
     label: 'Klassisch Frage & Antwort',
@@ -63,5 +71,15 @@ export const GAME_MODES = {
     validateQuestions: iiValidate,
     getValidationError: iiError,
     questionDisplay: IdentifyImageQuestionDisplay,
+  },
+  blind_top5: {
+    label: 'Blind Top 5',
+    hostView: BlindTop5HostView,
+    playerView: BlindTop5PlayerView,
+    questionEditor: BlindTop5QuestionEditor,
+    validateQuestions: bt5Validate,
+    getValidationError: bt5Error,
+    questionDisplay: null,
+    fixedQuestionCount: 5,
   },
 };

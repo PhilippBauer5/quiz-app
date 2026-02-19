@@ -42,6 +42,7 @@ export default function QuizEditPage() {
 
   const mode = GAME_MODES[quiz?.quiz_type] || GAME_MODES.qa;
   const ModeEditor = mode.questionEditor;
+  const fixedCount = mode.fixedQuestionCount || 0;
 
   useEffect(() => {
     Promise.all([loadQuiz(id), loadQuestions(id)])
@@ -152,7 +153,9 @@ export default function QuizEditPage() {
 
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Fragen</h2>
+          <h2 className="text-lg font-semibold">
+            {fixedCount ? 'Items' : 'Fragen'}
+          </h2>
           <Badge variant="secondary">{questions.length}</Badge>
         </div>
 
@@ -163,9 +166,9 @@ export default function QuizEditPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium text-gray-500">
-                      Frage {idx + 1}
+                      {fixedCount ? `Platz ${idx + 1}` : `Frage ${idx + 1}`}
                     </span>
-                    {questions.length > 1 && (
+                    {!fixedCount && questions.length > 1 && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -183,6 +186,7 @@ export default function QuizEditPage() {
                       question={q}
                       onUpdate={updateQuestion}
                       quizId={id}
+                      index={idx}
                     />
                   )}
                 </CardContent>
@@ -191,13 +195,15 @@ export default function QuizEditPage() {
           ))}
         </div>
 
-        <button
-          onClick={addQuestion}
-          className="mt-3 w-full rounded-lg border-2 border-dashed border-gray-700 px-4 py-3 text-sm text-gray-500 hover:border-blue-500 hover:text-blue-400 transition-all flex items-center justify-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Frage hinzufügen
-        </button>
+        {!fixedCount && (
+          <button
+            onClick={addQuestion}
+            className="mt-3 w-full rounded-lg border-2 border-dashed border-gray-700 px-4 py-3 text-sm text-gray-500 hover:border-blue-500 hover:text-blue-400 transition-all flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Frage hinzufügen
+          </button>
+        )}
       </div>
 
       <div className="flex gap-3">

@@ -89,8 +89,8 @@ export async function deleteQuiz(id) {
   if (rooms?.length) {
     const roomIds = rooms.map((r) => r.id);
     await supabase.from('submissions').delete().in('room_id', roomIds);
-    await supabase.from('scores').delete().in('room_id', roomIds);
-    await supabase.from('players').delete().in('room_id', roomIds);
+    await supabase.from('room_scores').delete().in('room_id', roomIds);
+    await supabase.from('room_players').delete().in('room_id', roomIds);
     await supabase.from('rooms').delete().eq('quiz_id', id);
   }
 
