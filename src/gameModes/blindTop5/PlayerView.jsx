@@ -23,8 +23,8 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dragOver, setDragOver] = useState(null);
-  const [showIntroSplash, setShowIntroSplash] = useState(false);
-  const hasShownSplash = useRef(false);
+  const [splashDone, setSplashDone] = useState(false);
+  const splashStartedAt = useRef(null);
 
   // Load all items for this quiz
   useEffect(() => {
@@ -89,20 +89,20 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
     setDragOver(null);
   }, [question?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Intro splash: show once when first item arrives in a fresh game ──
+  // ── Intro splash: dismiss after 3s ──
   useEffect(() => {
-    if (!question || hasShownSplash.current) return;
-    // Mid-game refresh → skip splash
-    if (Object.keys(placements).length > 0) {
-      hasShownSplash.current = true;
-      return;
-    }
-    // First item just arrived → show splash for 3s, then reveal item
-    hasShownSplash.current = true;
-    setShowIntroSplash(true);
-    const timer = setTimeout(() => setShowIntroSplash(false), 3000);
+    if (!splashStartedAt.current || splashDone) return;
+    const timer = setTimeout(() => setSplashDone(true), 3000);
     return () => clearTimeout(timer);
-  }, [question]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [splashDone]);
+
+  // Synchronous splash decision (no flash — computed during render, not after)
+  const isFirstItem =
+    question && !splashDone && Object.keys(placements).length === 0;
+  if (isFirstItem && !splashStartedAt.current) {
+    splashStartedAt.current = Date.now();
+  }
+  const showIntroSplash = isFirstItem && splashStartedAt.current;
 
   // Derived state
   const usedPositions = Object.values(placements);
@@ -173,7 +173,7 @@ export default function BlindTop5PlayerView({ room, question, playerData }) {
   }
 
   // ── States ──
-  // Intro splash: shown for 3s when the first item arrives
+  // Intro splash: shown for 3s when the first item arrives (sync — no flash)
   if (showIntroSplash) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
