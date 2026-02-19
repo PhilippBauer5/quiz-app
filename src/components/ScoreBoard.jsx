@@ -23,17 +23,24 @@ export default function ScoreBoard({
   // Sort descending by score
   const sorted = [...scores].sort((a, b) => b.score - a.score);
 
-  // Bar colors by rank
-  const barColors = [
-    'from-yellow-500 to-yellow-600', // 1st
-    'from-gray-300 to-gray-400', // 2nd
-    'from-amber-600 to-amber-700', // 3rd
+  // Fixed color per player – based on stable alphabetical order of player_id
+  // so colors never change when rankings shift
+  const playerColors = [
+    'from-rose-500 to-rose-600',
     'from-blue-500 to-blue-600',
-    'from-blue-500 to-blue-600',
-    'from-blue-500 to-blue-600',
-    'from-blue-500 to-blue-600',
-    'from-blue-500 to-blue-600',
+    'from-emerald-500 to-emerald-600',
+    'from-amber-500 to-amber-600',
+    'from-violet-500 to-violet-600',
+    'from-cyan-500 to-cyan-600',
+    'from-pink-500 to-pink-600',
+    'from-lime-500 to-lime-600',
   ];
+
+  const stableIds = [...scores].map((s) => s.player_id).sort();
+  const colorByPlayerId = {};
+  stableIds.forEach((id, i) => {
+    colorByPlayerId[id] = playerColors[i % playerColors.length];
+  });
 
   return (
     <Card className={compact ? '' : 'mt-4'}>
@@ -54,7 +61,7 @@ export default function ScoreBoard({
             const nickname = s.room_players?.nickname || 'Spieler';
             const pct = maxScore > 0 ? (s.score / maxScore) * 100 : 0;
             const isHighlighted = highlightPlayerId === s.player_id;
-            const colorClass = barColors[idx] || barColors[barColors.length - 1];
+            const colorClass = colorByPlayerId[s.player_id];
 
             return (
               <div key={s.player_id} className="flex items-center gap-3">
