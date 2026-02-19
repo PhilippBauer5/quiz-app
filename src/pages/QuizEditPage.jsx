@@ -79,6 +79,12 @@ export default function QuizEditPage() {
       return;
     }
 
+    const validationError = mode.getValidationError(questions);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     setSaving(true);
     setError(null);
 

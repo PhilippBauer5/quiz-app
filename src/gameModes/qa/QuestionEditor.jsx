@@ -15,7 +15,7 @@ export default function QuestionEditor({ question, onUpdate }) {
       <Input
         value={question.answer || ''}
         onChange={(e) => onUpdate(question.key, 'answer', e.target.value)}
-        placeholder="Musterantwort (optional)"
+        placeholder="Musterantwort *"
         className="text-sm"
       />
     </>

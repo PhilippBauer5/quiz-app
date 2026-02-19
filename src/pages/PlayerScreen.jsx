@@ -384,7 +384,22 @@ export default function PlayerScreen() {
                   <h2 className="text-xl font-semibold mb-2">
                     {result ? 'Richtig!' : 'Leider falsch.'}
                   </h2>
-                  <p className="text-gray-400">Warte auf die nächste Frage…</p>
+
+                  {/* Musterantwort splash */}
+                  {currentQuestion?.answer && (
+                    <div className="mt-4 mb-2 rounded-xl bg-gray-800/60 border border-gray-700 px-5 py-4 inline-block">
+                      <p className="text-xs uppercase tracking-widest text-gray-500 mb-1">
+                        Richtige Antwort
+                      </p>
+                      <p className="text-lg font-bold text-white">
+                        {currentQuestion.answer}
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-gray-400 mt-3">
+                    Warte auf die nächste Frage…
+                  </p>
                 </CardContent>
               </Card>
               {scores.length > 0 && (

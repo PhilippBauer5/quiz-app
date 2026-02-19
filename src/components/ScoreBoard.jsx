@@ -49,9 +49,7 @@ export default function ScoreBoard({
           <Trophy
             className={`${compact ? 'h-4 w-4' : 'h-5 w-5'} text-yellow-400`}
           />
-          <h3
-            className={`font-semibold ${compact ? 'text-sm' : 'text-base'}`}
-          >
+          <h3 className={`font-semibold ${compact ? 'text-sm' : 'text-base'}`}>
             Punktestand
           </h3>
         </div>
@@ -83,9 +81,7 @@ export default function ScoreBoard({
                 {/* Name */}
                 <span
                   className={`w-20 truncate text-sm ${
-                    isHighlighted
-                      ? 'text-white font-bold'
-                      : 'text-gray-300'
+                    isHighlighted ? 'text-white font-bold' : 'text-gray-300'
                   }`}
                 >
                   {nickname}
