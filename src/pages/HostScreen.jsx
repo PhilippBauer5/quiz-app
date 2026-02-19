@@ -87,9 +87,10 @@ export default function HostScreen() {
     })();
   }, [code]);
 
-  // Load submissions for current question (skip when ModeHostView is active – it polls itself)
+  // Load submissions for current question (skip when a custom ModeHostView replaces the default UI)
+  const usesCustomHostView = quizType !== 'qa' && !!ModeHostView;
   const refreshSubmissions = useCallback(async () => {
-    if (!room || !currentQuestion || ModeHostView) return;
+    if (!room || !currentQuestion || usesCustomHostView) return;
     try {
       let subs = await loadSubmissions(room.id, currentQuestion.id);
 
