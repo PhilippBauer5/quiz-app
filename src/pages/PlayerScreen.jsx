@@ -8,7 +8,6 @@ import {
 } from '../lib/supabase/api';
 import { getPlayerData } from '../lib/supabase/storage';
 import { supabase } from '../lib/supabaseClient';
-import { getImageUrl } from '../lib/supabase/imageStorage';
 import { GAME_MODES } from '../gameModes';
 import {
   Clock,
@@ -207,7 +206,9 @@ export default function PlayerScreen() {
   const isWaiting = room?.status === 'waiting';
   const isFinished = room?.status === 'finished';
   const quizType = room?.quizzes?.quiz_type || 'qa';
-  const ModePlayerView = GAME_MODES[quizType]?.playerView;
+  const modeConfig = GAME_MODES[quizType];
+  const ModePlayerView = modeConfig?.playerView;
+  const ModeQuestionDisplay = modeConfig?.questionDisplay;
 
   const placeIcon = (idx) => {
     const colors = ['text-yellow-400', 'text-gray-400', 'text-amber-600'];
@@ -269,17 +270,14 @@ export default function PlayerScreen() {
               <Card className="mb-4">
                 <CardContent className="pt-6">
                   <p className="text-sm text-gray-500 mb-1">Frage</p>
-                  {currentQuestion.image_path && (
-                    <img
-                      src={getImageUrl(currentQuestion.image_path)}
-                      alt="Fragebild"
-                      className="rounded-xl max-h-64 w-full object-contain bg-gray-900 border border-gray-700 mb-3"
-                    />
-                  )}
-                  {currentQuestion.question && (
-                    <h2 className="text-xl font-semibold">
-                      {currentQuestion.question}
-                    </h2>
+                  {ModeQuestionDisplay ? (
+                    <ModeQuestionDisplay question={currentQuestion} />
+                  ) : (
+                    currentQuestion.question && (
+                      <h2 className="text-xl font-semibold">
+                        {currentQuestion.question}
+                      </h2>
+                    )
                   )}
                 </CardContent>
               </Card>
